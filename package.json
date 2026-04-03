@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/base/index.js",
-    "dev": "tsx src/base/index.ts",
+    "dev": "tsx base/index.ts",
     "test": "vitest run"
   },
   "dependencies": {
