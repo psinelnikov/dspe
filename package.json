@@ -6,7 +6,9 @@
     "build": "tsc",
     "start": "node dist/base/index.js",
     "dev": "tsx base/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build"
   },
   "dependencies": {
     "viem": "^2.21.0",

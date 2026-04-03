@@ -218,9 +218,52 @@ app/                  TEE extension business logic
 app/checks/           Individual risk check implementations
 base/                 Infrastructure (HTTP server, routing, utilities)
 tests/                Vitest tests (37 tests)
+frontend/             React dashboard (policies, audit log, governance)
 Dockerfile            TEE node + extension dual-process container
 docker-compose.yml    extension-tee + redis
 ```
+
+## Frontend Dashboard
+
+A React dashboard for managing policies, reviewing audit logs, and handling governance proposals.
+
+### Setup
+
+```bash
+cd frontend
+npm install
+```
+
+### Configure
+
+```bash
+cp .env.example .env
+```
+
+Set the deployed contract addresses:
+
+```
+VITE_GOVERNANCE_MULTISIG_ADDR=0x...
+VITE_POLICY_REGISTRY_ADDR=0x...
+VITE_AUDIT_LOG_ADDR=0x...
+VITE_MULTISIG_WALLET_ADDR=0x...
+```
+
+### Run
+
+```bash
+npm run dev
+```
+
+Opens at `http://localhost:5173`. Connect a MetaMask (or compatible) wallet configured for Flare Coston2.
+
+### Pages
+
+| Page | Description |
+|------|-------------|
+| **Policies** | List all policies with status, risk weight, limits, and signer sets. Click for detail view. |
+| **Audit Log** | Paginated list of all evaluation receipts with risk score visualization, check result breakdown (10 checks as PASS/FAIL), and signer threshold details. |
+| **Governance** | View, approve, and execute governance proposals. Create new policy proposals with a form (name, limits, signers, risk weight, allow/deny lists, verification requirements). |
 
 ## License
 
