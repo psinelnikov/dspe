@@ -19,6 +19,10 @@ contract AuditLog {
         entries.push(_entry);
     }
 
+    function postEntryMemory(AuditEntry memory _entry) external {
+        entries.push(_entry);
+    }
+
     function getEntryCount() external view returns (uint256) {
         return entries.length;
     }
