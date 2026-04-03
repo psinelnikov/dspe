@@ -1,0 +1,21 @@
+{
+  "name": "multisig-policy-engine",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/base/index.js",
+    "dev": "tsx src/base/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "eciesjs": "^0.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  }
+}
