@@ -21,6 +21,7 @@ export const CONTRACTS = {
   multisigWallet: import.meta.env.VITE_MULTISIG_WALLET_ADDR as `0x${string}`,
   presetPolicyRegistry: import.meta.env.VITE_PRESET_POLICY_REGISTRY_ADDR as `0x${string}`,
   instructionSender: import.meta.env.VITE_INSTRUCTION_SENDER_ADDR as `0x${string}`,
+  testToken: import.meta.env.VITE_TEST_TOKEN_ADDR as `0x${string}`,
 } as const;
 
 // Validate addresses to prevent burn address usage

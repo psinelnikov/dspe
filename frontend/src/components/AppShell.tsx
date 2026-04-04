@@ -13,10 +13,12 @@ import AuditLogPage from "../pages/AuditLogPage";
 import GovernancePage from "../pages/GovernancePage";
 import PolicyDetailPage from "../pages/PolicyDetailPage";
 import OnboardingPage from "../pages/OnboardingPage";
+import TestTransactionsPage from "../pages/TestTransactionsPage";
 
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
   { to: "/policies", label: "Policies", end: true },
+  { to: "/test", label: "Test", end: true },
   { to: "/audit", label: "Audit Log", end: false },
   { to: "/governance", label: "Governance", end: false },
   { to: "/onboarding", label: "+ New Wallet", end: false },
@@ -94,6 +96,7 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/policies" element={<PoliciesPage />} />
                 <Route path="/policy/:id" element={<PolicyDetailPage />} />
+                <Route path="/test" element={<TestTransactionsPage />} />
                 <Route path="/audit" element={<AuditLogPage />} />
                 <Route path="/governance" element={<GovernancePage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
