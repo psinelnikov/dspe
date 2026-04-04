@@ -213,6 +213,134 @@ export const POLICY_REGISTRY_ABI = [
   },
 ] as const;
 
+export const WALLET_FACTORY_ABI = [
+  {
+    type: "function",
+    name: "createWallet",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_signers", type: "address[]" },
+      { name: "_presetPolicyIds", type: "uint256[]" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "wallet", type: "address" },
+          { name: "governance", type: "address" },
+          { name: "policyRegistry", type: "address" },
+          { name: "auditLog", type: "address" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "function",
+    name: "createWalletNoPresets",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_signers", type: "address[]" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "wallet", type: "address" },
+          { name: "governance", type: "address" },
+          { name: "policyRegistry", type: "address" },
+          { name: "auditLog", type: "address" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "function",
+    name: "walletSingleton",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "teeExtensionRegistry",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "presetPolicyRegistry",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "event",
+    name: "WalletCreated",
+    inputs: [
+      { name: "wallet", type: "address", indexed: true },
+      { name: "governance", type: "address", indexed: true },
+      { name: "policyRegistry", type: "address", indexed: false },
+      { name: "auditLog", type: "address", indexed: false },
+      { name: "signers", type: "address[]", indexed: false },
+    ],
+  },
+] as const;
+
+export const PRESET_POLICY_REGISTRY_ABI = [
+  {
+    type: "function",
+    name: "presetName",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "string" }],
+  },
+  {
+    type: "function",
+    name: "presetRiskWeight",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "uint8" }],
+  },
+  {
+    type: "function",
+    name: "presetMaxValuePerTxUsd",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "presetMaxValueDailyUsd",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "presetRequireVerified",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "presetRequireErc7730",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getPresetCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
 export const AUDIT_LOG_ABI = [
   {
     type: "function",

@@ -5,10 +5,19 @@ import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import { wagmiConfig } from "../lib/wagmi";
 import { queryClient } from "../lib/query";
 import { ConnectButton } from "./ConnectButton";
+import { NetworkStatus } from "./NetworkStatus";
 import PoliciesPage from "../pages/PoliciesPage";
 import AuditLogPage from "../pages/AuditLogPage";
 import GovernancePage from "../pages/GovernancePage";
 import PolicyDetailPage from "../pages/PolicyDetailPage";
+import OnboardingPage from "../pages/OnboardingPage";
+
+const NAV_LINKS = [
+  { to: "/", label: "Policies", end: true },
+  { to: "/audit", label: "Audit Log", end: false },
+  { to: "/governance", label: "Governance", end: false },
+  { to: "/onboarding", label: "+ New Wallet", end: false },
+];
 
 function Shell({ children }: { children: ReactNode }) {
   return (
@@ -20,20 +29,18 @@ function Shell({ children }: { children: ReactNode }) {
               Multisig Policy Engine
             </h1>
             <nav className="flex gap-1">
-              {[
-                { to: "/", label: "Policies" },
-                { to: "/audit", label: "Audit Log" },
-                { to: "/governance", label: "Governance" },
-              ].map((link) => (
+              {NAV_LINKS.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  end={link.to === "/"}
+                  end={link.end}
                   className={({ isActive }) =>
                     `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-[var(--accent)] text-black"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
+                        : link.label === "+ New Wallet"
+                          ? "text-[var(--green)] hover:bg-[var(--bg-card)]"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
                     }`
                   }
                 >
@@ -42,7 +49,10 @@ function Shell({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-          <ConnectButton />
+          <div className="flex items-center gap-3">
+            <NetworkStatus />
+            <ConnectButton />
+          </div>
         </div>
       </header>
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
@@ -66,6 +76,7 @@ export default function App() {
               <Route path="/policy/:id" element={<PolicyDetailPage />} />
               <Route path="/audit" element={<AuditLogPage />} />
               <Route path="/governance" element={<GovernancePage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
             </Routes>
           </Shell>
         </BrowserRouter>

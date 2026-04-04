@@ -18,7 +18,16 @@ export const CONTRACTS = {
   policyRegistry: import.meta.env.VITE_POLICY_REGISTRY_ADDR as `0x${string}`,
   auditLog: import.meta.env.VITE_AUDIT_LOG_ADDR as `0x${string}`,
   multisigWallet: import.meta.env.VITE_MULTISIG_WALLET_ADDR as `0x${string}`,
+  walletFactory: import.meta.env.VITE_WALLET_FACTORY_ADDR as `0x${string}`,
+  presetPolicyRegistry: import.meta.env.VITE_PRESET_POLICY_REGISTRY_ADDR as `0x${string}`,
 } as const;
+
+export const PRESET_DESCRIPTIONS: Record<number, string> = {
+  0: "Auto-approve transfers under $1,000. Low friction for everyday operations.",
+  1: "Transfers from $1K to $50K. Requires multi-sig approval with medium risk checks.",
+  2: "Admin operations like signer changes. Requires verified contracts and unanimous approval.",
+  3: "Interact with whitelisted DeFi protocols. Moderate limits with balanced security.",
+};
 
 export const CHECK_LABELS: Record<number, string> = {
   0: "Allowlist",
@@ -70,4 +79,11 @@ export function formatTimestamp(ts: bigint): string {
 
 export function explorerUrl(addr: string): string {
   return `https://coston2-explorer.flare.network/address/${addr}`;
+}
+
+export function formatUsd(val: bigint): string {
+  const num = Number(val) / 1e18;
+  if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
+  if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
+  return num.toFixed(0);
 }

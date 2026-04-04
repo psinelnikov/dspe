@@ -1,4 +1,5 @@
-import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useBalance, useSwitchChain, useChainId } from "wagmi";
+import { formatUnits } from "viem";
 import { FLARE_COSTON2_CHAIN, shortAddress } from "../lib/constants";
 
 export function ConnectButton() {
@@ -6,13 +7,33 @@ export function ConnectButton() {
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({ address, chainId: FLARE_COSTON2_CHAIN.id });
+  const { switchChain } = useSwitchChain();
+  const chainId = useChainId();
+
+  const handleSwitchNetwork = async () => {
+    try {
+      await switchChain({ chainId: FLARE_COSTON2_CHAIN.id });
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+    }
+  };
+
+  const isWrongNetwork = chainId !== FLARE_COSTON2_CHAIN.id;
 
   if (isConnected && address) {
     return (
       <div className="flex items-center gap-3">
-        {balance && (
+        {isWrongNetwork && (
+          <button
+            onClick={handleSwitchNetwork}
+            className="btn btn-warning btn-sm"
+          >
+            Switch to Coston2
+          </button>
+        )}
+        {balance && !isWrongNetwork && (
           <span className="text-xs text-[var(--text-secondary)]">
-            {Number.parseFloat(balance.formatted).toFixed(4)} C2FLR
+            {Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)} C2FLR
           </span>
         )}
         <a
@@ -38,7 +59,7 @@ export function ConnectButton() {
       {connectors.map((connector) => (
         <button
           key={connector.uid}
-          onClick={() => connect({ connector })}
+          onClick={() => connect({ connector, chainId: FLARE_COSTON2_CHAIN.id })}
           className="btn btn-primary"
         >
           Connect Wallet
