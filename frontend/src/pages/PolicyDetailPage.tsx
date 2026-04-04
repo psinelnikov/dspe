@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useReadContract } from "wagmi";
 import { FLARE_COSTON2_CHAIN, shortAddress, formatTimestamp, decodeCheckResults } from "../lib/constants";
+import { CopyableAddress } from "../components/CopyableAddress";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
 import { useMultisig } from "../context/MultisigContext";
 
@@ -74,7 +75,7 @@ export default function PolicyDetailPage() {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Target Addresses</dt>
-              <dd>{p.conditions.targetAddresses.length === 0 ? "Any" : p.conditions.targetAddresses.map((a: string) => shortAddress(a)).join(", ")}</dd>
+              <dd>{p.conditions.targetAddresses.length === 0 ? "Any" : p.conditions.targetAddresses.map((a: string) => <CopyableAddress key={a} address={a} />).reduce((prev: React.ReactNode, curr: React.ReactNode, i: number) => <>{prev}{i > 0 ? ", " : ""}{curr}</>, null)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Function Selectors</dt>
@@ -114,12 +115,12 @@ export default function PolicyDetailPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Allowlist</dt>
-              <dd>{p.limits.allowlist.length === 0 ? "None" : p.limits.allowlist.map((a: string) => shortAddress(a)).join(", ")}</dd>
+              <dd>{p.limits.allowlist.length === 0 ? "None" : p.limits.allowlist.map((a: string) => <CopyableAddress key={a} address={a} />).reduce((prev: React.ReactNode, curr: React.ReactNode, i: number) => <>{prev}{i > 0 ? ", " : ""}{curr}</>, null)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Denylist</dt>
               <dd className="text-[var(--red)]">
-                {p.limits.denylist.length === 0 ? "None" : p.limits.denylist.map((a: string) => shortAddress(a)).join(", ")}
+                {p.limits.denylist.length === 0 ? "None" : p.limits.denylist.map((a: string) => <CopyableAddress key={a} address={a} />).reduce((prev: React.ReactNode, curr: React.ReactNode, i: number) => <>{prev}{i > 0 ? ", " : ""}{curr}</>, null)}
               </dd>
             </div>
           </dl>
@@ -137,12 +138,13 @@ export default function PolicyDetailPage() {
               href={`https://coston2-explorer.flare.network/address/${s}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 bg-[var(--bg-secondary)] rounded-lg px-3 py-2 text-sm font-mono hover:border-[var(--accent)] border border-transparent transition-colors"
+              className="flex items-center gap-2 bg-[var(--bg-secondary)] rounded-lg px-3 py-2 text-sm hover:border-[var(--accent)] border border-transparent transition-colors"
+              onClick={(e) => e.preventDefault()}
             >
               <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-black text-xs flex items-center justify-center font-semibold">
                 {i + 1}
               </span>
-              {shortAddress(s)}
+              <CopyableAddress address={s} />
             </a>
           ))}
         </div>

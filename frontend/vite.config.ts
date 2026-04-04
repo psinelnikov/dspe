@@ -11,6 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/tee/, ''),
       },
+      '/rpc': {
+        target: 'https://coston2-api.flare.network/ext/C/rpc',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/rpc/, ''),
+        secure: false,
+      },
     },
   },
 });

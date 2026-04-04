@@ -6,6 +6,7 @@ import { wagmiConfig } from "../lib/wagmi";
 import { queryClient } from "../lib/query";
 import { ConnectButton } from "./ConnectButton";
 import { NetworkStatus } from "./NetworkStatus";
+import { CopyableAddress } from "./CopyableAddress";
 import { MultisigProvider, useMultisig } from "../context/MultisigContext";
 import HomePage from "../pages/HomePage";
 import PoliciesPage from "../pages/PoliciesPage";
@@ -14,10 +15,12 @@ import GovernancePage from "../pages/GovernancePage";
 import PolicyDetailPage from "../pages/PolicyDetailPage";
 import OnboardingPage from "../pages/OnboardingPage";
 import TestTransactionsPage from "../pages/TestTransactionsPage";
+import PendingTransactionsPage from "../pages/PendingTransactionsPage";
 
 const NAV_LINKS = [
+  { to: "/pending", label: "Pending", end: true },
   { to: "/policies", label: "Policies", end: true },
-  { to: "/test", label: "Test", end: true },
+  { to: "/transact", label: "Transact", end: true },
   { to: "/audit", label: "Audit Log", end: false },
   { to: "/governance", label: "Governance", end: false },
 ];
@@ -58,7 +61,7 @@ function Shell({ children }: { children: ReactNode }) {
             {hasSelection && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-card)] rounded-md">
                 <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
-                <span className="text-sm font-mono">{selectedMultisig?.governance.slice(0, 8)}...</span>
+                <CopyableAddress address={selectedMultisig?.wallet || ""} short={true} />
                 <button
                   onClick={clearSelection}
                   className="text-xs text-[var(--red)] hover:underline"
@@ -90,9 +93,10 @@ export default function App() {
             <Shell>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/pending" element={<PendingTransactionsPage />} />
                 <Route path="/policies" element={<PoliciesPage />} />
                 <Route path="/policy/:id" element={<PolicyDetailPage />} />
-                <Route path="/test" element={<TestTransactionsPage />} />
+                <Route path="/transact" element={<TestTransactionsPage />} />
                 <Route path="/audit" element={<AuditLogPage />} />
                 <Route path="/governance" element={<GovernancePage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useReadContracts, useReadContract, useWriteContract, useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { FLARE_COSTON2_CHAIN, shortAddress, formatTimestamp } from "../lib/constants";
+import { CopyableAddress } from "../components/CopyableAddress";
 import { GOVERNANCE_MULTISIG_ABI, POLICY_REGISTRY_ABI } from "../lib/abi";
 import { encodeFunctionData, type Hex } from "viem";
 import { Link } from "react-router-dom";
@@ -139,7 +140,7 @@ function ProposalRow({ proposal, totalSigners, userAddress, governanceAddress }:
             )}
           </div>
           <p className="text-xs text-[var(--text-secondary)] mt-1">
-            Target: <a href={`https://coston2-explorer.flare.network/address/${proposal.target}`} target="_blank" rel="noreferrer" className="hover:text-[var(--accent)] font-mono">{shortAddress(proposal.target)}</a>
+            Target: <CopyableAddress address={proposal.target} />
             &middot; Approvals: {Number(proposal.approvalCount)}/{totalSigners}
             &middot; Created: Block {Number(proposal.createdAt)}
           </p>

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther, encodeFunctionData, parseUnits, type Address } from "viem";
 import { useMultisig } from "../context/MultisigContext";
 import { MULTISIG_WALLET_ABI, ERC20_ABI, INSTRUCTION_SENDER_ABI } from "../lib/abi";
 import { CONTRACTS, shortAddress, riskColor, riskLabel, decodeCheckResults } from "../lib/constants";
+import { CopyableAddress } from "../components/CopyableAddress";
+import { useSearchParams } from "react-router-dom";
 import { 
   encryptEvaluateRequest, 
   fetchTeePublicKey, 
@@ -62,6 +64,8 @@ export default function TestTransactionsPage() {
   const { address } = useAccount();
   const { selectedMultisig, hasSelection } = useMultisig();
   const publicClient = usePublicClient();
+  const [searchParams] = useSearchParams();
+  const txIdFromUrl = searchParams.get("tx");
   
   const [activeTab, setActiveTab] = useState<"scenarios" | "erc20" | "mint" | "custom" | "tee">("scenarios");
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null);
@@ -107,7 +111,7 @@ export default function TestTransactionsPage() {
   
   // Transaction state
   const [txNonce, setTxNonce] = useState(Date.now().toString());
-  const [submittedTxId, setSubmittedTxId] = useState<string | null>(null);
+  const [submittedTxId, setSubmittedTxId] = useState<string | null>(txIdFromUrl);
   const [txDetails, setTxDetails] = useState<{
     target: string;
     value: string;
@@ -124,6 +128,9 @@ export default function TestTransactionsPage() {
   
   const { writeContract: writeEvaluationAttested, data: evalHash, isPending: isEvalPending } = useWriteContract();
   const { isLoading: isEvalConfirming, isSuccess: isEvalConfirmed } = useWaitForTransactionReceipt({ hash: evalHash });
+
+  const { writeContract: writeMockEvaluation, data: mockEvalHash, isPending: isMockEvalPending } = useWriteContract();
+  const { isLoading: isMockEvalConfirming, isSuccess: isMockEvalConfirmed } = useWaitForTransactionReceipt({ hash: mockEvalHash });
 
   // Fetch token balance
   useEffect(() => {
@@ -146,6 +153,30 @@ export default function TestTransactionsPage() {
     
     fetchBalance();
   }, [selectedMultisig, publicClient]);
+
+  // Parse transaction receipt to get actual transaction ID when confirmed
+  useEffect(() => {
+    if (!isConfirmed || !hash || !publicClient || !selectedMultisig) return;
+    
+    const parseReceipt = async () => {
+      try {
+        const receipt = await publicClient.getTransactionReceipt({ hash });
+        
+        // For now, just use the transaction count - 1 as the ID
+        const count = await publicClient.readContract({
+          address: selectedMultisig.wallet,
+          abi: MULTISIG_WALLET_ABI,
+          functionName: "txCount",
+        });
+        const actualTxId = (count - 1n).toString();
+        setSubmittedTxId(actualTxId);
+      } catch (err) {
+        console.error("Failed to parse transaction receipt:", err);
+      }
+    };
+    
+    parseReceipt();
+  }, [isConfirmed, hash, publicClient, selectedMultisig]);
 
   // Fetch TEE public key on mount
   useEffect(() => {
@@ -341,7 +372,34 @@ export default function TestTransactionsPage() {
     });
   };
 
-  const fetchTxDetails = async (txId: string) => {
+  const handleMockEvaluation = async () => {
+    if (!selectedMultisig || !submittedTxId || selectedScenario === null || !address) return;
+    
+    const scenario = TEST_SCENARIOS[selectedScenario];
+    
+    // Generate synthetic check results bitmap (all checks pass for simplicity)
+    const checkResults = 0b1111111111; // All 10 checks pass
+    
+    // For mock evaluation, use the connected address as the signer
+    // In a real scenario, this would come from the TEE evaluation
+    const mockSigners = [address];
+    
+    writeMockEvaluation({
+      address: selectedMultisig.wallet,
+      abi: MULTISIG_WALLET_ABI,
+      functionName: "submitEvaluation",
+      args: [
+        BigInt(submittedTxId),
+        scenario.expectedRiskScore,
+        checkResults,
+        BigInt(scenario.policyId),
+        scenario.expectedRequiredSigners,
+        mockSigners,
+      ],
+    });
+  };
+
+  const fetchTxDetails = useCallback(async (txId: string) => {
     if (!selectedMultisig || !publicClient) return;
     
     try {
@@ -373,7 +431,15 @@ export default function TestTransactionsPage() {
     } catch (err) {
       console.error("Failed to fetch tx details:", err);
     }
-  };
+  }, [selectedMultisig, publicClient]);
+
+  // Auto-switch to TEE tab and fetch details when coming from Pending page with tx ID
+  useEffect(() => {
+    if (txIdFromUrl && selectedMultisig && publicClient) {
+      setActiveTab("tee");
+      fetchTxDetails(txIdFromUrl);
+    }
+  }, [txIdFromUrl, selectedMultisig, publicClient]);
 
   if (!hasSelection) {
     return (
@@ -396,9 +462,17 @@ export default function TestTransactionsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2">Test Transactions</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold">Test Transactions</h1>
+        <a
+          href="/pending"
+          className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border)] rounded-md hover:bg-[var(--border)] text-sm"
+        >
+          View Pending →
+        </a>
+      </div>
       <p className="text-[var(--text-secondary)] mb-2">
-        Testing wallet: {shortAddress(selectedMultisig!.wallet)}
+        Testing wallet: <CopyableAddress address={selectedMultisig!.wallet} />
       </p>
       <div className="flex items-center gap-4 mb-6">
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-md px-3 py-1.5">
@@ -406,7 +480,7 @@ export default function TestTransactionsPage() {
           <span className="text-sm font-mono font-medium">{Number(tokenBalance).toLocaleString()} THVT</span>
         </div>
         <div className="text-xs text-[var(--text-secondary)]">
-          Token: {shortAddress(CONTRACTS.testToken)}
+          Token: <CopyableAddress address={CONTRACTS.testToken} />
         </div>
         {teePublicKey && (
           <div className="bg-[var(--green)] bg-opacity-10 border border-[var(--green)] rounded-md px-3 py-1.5">
@@ -547,7 +621,7 @@ export default function TestTransactionsPage() {
                 </p>
                 {submittedTxId ? (
                   <div className="bg-[var(--green)] bg-opacity-10 border border-[var(--green)] rounded-md p-3">
-                    <p className="text-sm text-[var(--green)]">
+                    <p className="text-sm text-black">
                       Transaction submitted: ID {submittedTxId}
                     </p>
                   </div>
@@ -594,6 +668,28 @@ export default function TestTransactionsPage() {
                                   : "Error - Try Again"
                   }
                 </button>
+
+                <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                  <p className="text-xs text-[var(--text-secondary)] mb-2">
+                    TEE not working? Use mock evaluation to bypass:
+                  </p>
+                  <button
+                    onClick={handleMockEvaluation}
+                    disabled={!submittedTxId || selectedScenario === null || isMockEvalPending}
+                    className="w-full px-4 py-2 bg-[var(--bg-card)] border border-[var(--orange)] text-[var(--orange)] rounded-md hover:bg-[var(--orange)] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {isMockEvalPending 
+                      ? "Submitting Mock Eval..." 
+                      : isMockEvalConfirming 
+                        ? "Confirming..." 
+                        : "Mock Evaluation (Skip TEE)"}
+                  </button>
+                  {isMockEvalConfirmed && (
+                    <p className="text-xs text-[var(--green)] mt-2">
+                      Mock evaluation submitted! Transaction is now evaluated and ready for approval.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {evaluationResult && (
@@ -764,14 +860,6 @@ export default function TestTransactionsPage() {
             <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-4">
               <div className="text-xs text-[var(--text-secondary)] mb-1">Current Wallet THVT Balance</div>
               <div className="font-mono text-lg">{Number(tokenBalance).toLocaleString()} THVT</div>
-            </div>
-
-            <div className="bg-[var(--accent)] bg-opacity-10 border border-[var(--accent)] rounded-md p-3 mb-4">
-              <div className="text-sm font-medium text-[var(--accent)] mb-1">Target Multisig</div>
-              <div className="font-mono text-sm">{selectedMultisig?.wallet}</div>
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Tokens will be minted directly to the selected multisig wallet
-              </p>
             </div>
 
             <button

@@ -1,5 +1,6 @@
 import { useReadContracts } from "wagmi";
 import { FLARE_COSTON2_CHAIN, shortAddress, riskLabel } from "../lib/constants";
+import { CopyableAddress } from "../components/CopyableAddress";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
 import { Link, Navigate } from "react-router-dom";
 import { useMultisig } from "../context/MultisigContext";
@@ -138,8 +139,10 @@ export default function PoliciesPage() {
                   <span>
                     Targets:{" "}
                     {policy.conditions.targetAddresses
-                      .map((a: string) => shortAddress(a))
-                      .join(", ")}
+                      .map((a: string) => <CopyableAddress key={a} address={a} />)
+                      .reduce((prev: React.ReactNode, curr: React.ReactNode, i: number) => (
+                        <>{prev}{i > 0 ? ", " : ""}{curr}</>
+                      ), null)}
                   </span>
                 )}
                 {policy.conditions.functionSelectors.length > 0 && (
@@ -151,12 +154,7 @@ export default function PoliciesPage() {
 
               <div className="mt-3 flex gap-2">
                 {policy.signers.map((s: string, i: number) => (
-                  <span
-                    key={i}
-                    className="text-xs font-mono bg-[var(--bg-secondary)] px-2 py-0.5 rounded"
-                  >
-                    {shortAddress(s)}
-                  </span>
+                  <CopyableAddress key={i} address={s} />
                 ))}
               </div>
             </Link>

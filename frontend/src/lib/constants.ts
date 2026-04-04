@@ -3,7 +3,7 @@ export const FLARE_COSTON2_CHAIN = {
   name: "Flare Coston2",
   nativeCurrency: { name: "C2FLR", symbol: "C2FLR", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://coston2-api.flare.network/ext/C/rpc"] },
+    default: { http: ["/rpc"] },
   },
   blockExplorers: {
     default: {

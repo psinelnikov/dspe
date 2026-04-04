@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { decodeEventLog, parseAbiItem } from "viem";
 import { FLARE_COSTON2_CHAIN, CONTRACTS, PRESET_DESCRIPTIONS, shortAddress, explorerUrl } from "../lib/constants";
+import { CopyableAddress } from "../components/CopyableAddress";
 import { WALLET_FACTORY_ABI } from "../lib/abi";
 
 type Step = "signers" | "policies" | "review" | "deploying" | "done";
@@ -222,7 +223,7 @@ function SignersStep({
           onClick={onAddSelf}
           className="text-xs text-[var(--accent)] hover:underline mb-3 block"
         >
-          + Add your connected wallet ({shortAddress(connectedAddress!)})
+          + Add your connected wallet (<CopyableAddress address={connectedAddress!} />)
         </button>
       )}
 
@@ -239,14 +240,7 @@ function SignersStep({
             >
               <div className="flex items-center gap-3">
                 <span className="text-xs text-[var(--text-secondary)] w-6">#{i + 1}</span>
-                <a
-                  href={explorerUrl(s)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-sm hover:text-[var(--accent)]"
-                >
-                  {shortAddress(s)}
-                </a>
+                <CopyableAddress address={s} />
                 {connectedAddress === s && (
                   <span className="badge badge-yellow text-xs">You</span>
                 )}
@@ -376,15 +370,7 @@ function ReviewStep({
           </h4>
           <div className="flex flex-wrap gap-2">
             {signers.map((s, i) => (
-              <a
-                key={s}
-                href={explorerUrl(s)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-mono bg-[var(--bg-secondary)] px-2 py-1 rounded hover:text-[var(--accent)]"
-              >
-                #{i + 1} {shortAddress(s)}
-              </a>
+              <CopyableAddress key={s} address={s} />
             ))}
           </div>
         </div>
@@ -637,14 +623,7 @@ function DeployStep({
             <p className="text-sm text-[var(--text-secondary)] mb-4">
               Waiting for confirmation on Flare Coston2.
             </p>
-            <a
-              href={`https://coston2-explorer.flare.network/tx/${txHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-[var(--accent)] hover:underline font-mono"
-            >
-              {shortAddress(txHash)}
-            </a>
+            <CopyableAddress address={txHash} short={false} />
           </>
         )}
       </div>
@@ -691,14 +670,7 @@ function ContractRow({ label, address }: { label: string; address: `0x${string}`
   return (
     <div className="flex items-center justify-between bg-[var(--bg-secondary)] rounded-lg px-3 py-2">
       <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-      <a
-        href={explorerUrl(address)}
-        target="_blank"
-        rel="noreferrer"
-        className="font-mono text-sm hover:text-[var(--accent)]"
-      >
-        {shortAddress(address)}
-      </a>
+      <CopyableAddress address={address} />
     </div>
   );
 }
