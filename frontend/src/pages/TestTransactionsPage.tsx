@@ -56,7 +56,7 @@ const TEST_SCENARIOS = [
 ];
 
 // TEE Proxy URL - configurable via env
-const TEE_PROXY_URL = import.meta.env.VITE_TEE_PROXY_URL || "http://localhost:6676";
+const TEE_PROXY_URL = import.meta.env.VITE_TEE_PROXY_URL || "/tee";
 
 export default function TestTransactionsPage() {
   const { address } = useAccount();

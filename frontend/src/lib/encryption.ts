@@ -45,7 +45,7 @@ export function encryptEvaluateRequest(
 /**
  * Fetch the TEE public key from the proxy
  * @param proxyUrl - The TEE proxy URL (e.g., http://localhost:6676)
- * @returns The TEE public key as an uncompressed hex string
+ * @returns The TEE public key as an uncompressed hex string (0x04 + x + y)
  */
 export async function fetchTeePublicKey(proxyUrl: string): Promise<`0x${string}`> {
   const response = await fetch(`${proxyUrl}/info`);
@@ -54,11 +54,16 @@ export async function fetchTeePublicKey(proxyUrl: string): Promise<`0x${string}`
   }
   
   const info = await response.json();
-  if (!info.publicKey) {
+  const pubKey = info.teeInfo?.publicKey;
+  
+  if (!pubKey || !pubKey.x || !pubKey.y) {
     throw new Error("No publicKey in TEE info response");
   }
   
-  return info.publicKey as `0x${string}`;
+  // Combine x and y coordinates into uncompressed format: 0x04 + x + y
+  const x = pubKey.x.replace(/^0x/, "");
+  const y = pubKey.y.replace(/^0x/, "");
+  return `0x04${x}${y}` as `0x${string}`;
 }
 
 /**
