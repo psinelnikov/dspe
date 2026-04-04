@@ -20,7 +20,13 @@ export const CONTRACTS = {
   multisigWallet: import.meta.env.VITE_MULTISIG_WALLET_ADDR as `0x${string}`,
   walletFactory: import.meta.env.VITE_WALLET_FACTORY_ADDR as `0x${string}`,
   presetPolicyRegistry: import.meta.env.VITE_PRESET_POLICY_REGISTRY_ADDR as `0x${string}`,
+  instructionSender: import.meta.env.VITE_INSTRUCTION_SENDER_ADDR as `0x${string}`,
 } as const;
+
+// Validate addresses to prevent burn address usage
+export function validateAddress(address: string | undefined): address is `0x${string}` {
+  return !!address && address !== "0x0000000000000000000000000000000000000000" && address.startsWith("0x") && address.length === 42;
+}
 
 export const PRESET_DESCRIPTIONS: Record<number, string> = {
   0: "Auto-approve transfers under $1,000. Low friction for everyday operations.",

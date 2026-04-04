@@ -20,7 +20,11 @@ contract WalletFactory {
         address auditLog;
     }
 
+    mapping(address => WalletDeployment[]) public creatorWallets;
+    mapping(address => uint256) public creatorWalletCount;
+
     event WalletCreated(
+        address indexed creator,
         address indexed wallet,
         address indexed governance,
         address policyRegistry,
@@ -64,7 +68,10 @@ contract WalletFactory {
             auditLog: address(audit)
         });
 
-        emit WalletCreated(walletProxy, address(gov), address(policyReg), address(audit), _signers);
+        creatorWallets[msg.sender].push(deployment);
+        creatorWalletCount[msg.sender]++;
+
+        emit WalletCreated(msg.sender, walletProxy, address(gov), address(policyReg), address(audit), _signers);
 
         return deployment;
     }
@@ -74,5 +81,13 @@ contract WalletFactory {
     ) external returns (WalletDeployment memory) {
         uint256[] memory empty = new uint256[](0);
         return this.createWallet(_signers, empty);
+    }
+
+    function getWalletsForCreator(address _creator) external view returns (WalletDeployment[] memory) {
+        return creatorWallets[_creator];
+    }
+
+    function getWalletForCreatorAtIndex(address _creator, uint256 _index) external view returns (WalletDeployment memory) {
+        return creatorWallets[_creator][_index];
     }
 }
