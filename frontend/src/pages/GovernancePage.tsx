@@ -1,15 +1,36 @@
 import { useState } from "react";
 import { useReadContracts, useReadContract, useWriteContract, useAccount, useWaitForTransactionReceipt } from "wagmi";
-import { FLARE_COSTON2_CHAIN, CONTRACTS, shortAddress, formatTimestamp } from "../lib/constants";
+import { FLARE_COSTON2_CHAIN, shortAddress, formatTimestamp } from "../lib/constants";
 import { GOVERNANCE_MULTISIG_ABI, POLICY_REGISTRY_ABI } from "../lib/abi";
 import { encodeFunctionData, type Hex } from "viem";
+import { Link } from "react-router-dom";
+import { useMultisig } from "../context/MultisigContext";
 
 export default function GovernancePage() {
   const { address } = useAccount();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const { selectedMultisig, hasSelection } = useMultisig();
+
+  // Redirect to home if no multisig selected
+  if (!hasSelection) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold mb-4">No Multisig Selected</h2>
+        <p className="text-[var(--text-secondary)] mb-6">
+          Please select a multisig wallet to view its governance proposals
+        </p>
+        <Link to="/" className="btn btn-primary">
+          Go to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const governanceAddress = selectedMultisig!.governance;
+  const policyRegistryAddress = selectedMultisig!.policyRegistry;
 
   const { data: proposalCountData } = useReadContract({
-    address: CONTRACTS.governanceMultisig,
+    address: governanceAddress,
     abi: GOVERNANCE_MULTISIG_ABI,
     functionName: "proposalCount",
     chainId: FLARE_COSTON2_CHAIN.id,
@@ -18,7 +39,7 @@ export default function GovernancePage() {
   const proposalCount = proposalCountData ? Number(proposalCountData) : 0;
 
   const { data: signerCountData } = useReadContract({
-    address: CONTRACTS.governanceMultisig,
+    address: governanceAddress,
     abi: GOVERNANCE_MULTISIG_ABI,
     functionName: "getSignerCount",
     chainId: FLARE_COSTON2_CHAIN.id,
@@ -28,7 +49,7 @@ export default function GovernancePage() {
 
   const { data: proposals } = useReadContracts({
     contracts: Array.from({ length: proposalCount }, (_, i) => ({
-      address: CONTRACTS.governanceMultisig,
+      address: governanceAddress,
       abi: GOVERNANCE_MULTISIG_ABI,
       functionName: "getProposal",
       args: [BigInt(i)] as const,
@@ -60,7 +81,11 @@ export default function GovernancePage() {
       </div>
 
       {showCreateForm && (
-        <CreateProposalForm onClose={() => setShowCreateForm(false)} />
+        <CreateProposalForm 
+          onClose={() => setShowCreateForm(false)} 
+          governanceAddress={governanceAddress}
+          policyRegistryAddress={policyRegistryAddress}
+        />
       )}
 
       {proposalList.length === 0 ? (
@@ -75,6 +100,7 @@ export default function GovernancePage() {
               proposal={proposal}
               totalSigners={totalSigners}
               userAddress={address}
+              governanceAddress={governanceAddress}
             />
           ))}
         </div>
@@ -83,12 +109,12 @@ export default function GovernancePage() {
   );
 }
 
-function ProposalRow({ proposal, totalSigners, userAddress }: { proposal: any; totalSigners: number; userAddress?: `0x${string}` }) {
+function ProposalRow({ proposal, totalSigners, userAddress, governanceAddress }: { proposal: any; totalSigners: number; userAddress?: `0x${string}`; governanceAddress: `0x${string}` }) {
   const { writeContract, data: txHash } = useWriteContract();
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
   const { data: hasApproved } = useReadContract({
-    address: CONTRACTS.governanceMultisig,
+    address: governanceAddress,
     abi: GOVERNANCE_MULTISIG_ABI,
     functionName: "hasApproved",
     args: [proposal.id, userAddress ?? "0x0000000000000000000000000000000000000000"],
@@ -123,7 +149,7 @@ function ProposalRow({ proposal, totalSigners, userAddress }: { proposal: any; t
             <button
               onClick={() =>
                 writeContract({
-                  address: CONTRACTS.governanceMultisig,
+                  address: governanceAddress,
                   abi: GOVERNANCE_MULTISIG_ABI,
                   functionName: "approve",
                   args: [proposal.id],
@@ -140,7 +166,7 @@ function ProposalRow({ proposal, totalSigners, userAddress }: { proposal: any; t
             <button
               onClick={() =>
                 writeContract({
-                  address: CONTRACTS.governanceMultisig,
+                  address: governanceAddress,
                   abi: GOVERNANCE_MULTISIG_ABI,
                   functionName: "execute",
                   args: [proposal.id],
@@ -171,7 +197,15 @@ function ProposalRow({ proposal, totalSigners, userAddress }: { proposal: any; t
   );
 }
 
-function CreateProposalForm({ onClose }: { onClose: () => void }) {
+function CreateProposalForm({ 
+  onClose, 
+  governanceAddress, 
+  policyRegistryAddress 
+}: { 
+  onClose: () => void; 
+  governanceAddress: `0x${string}`; 
+  policyRegistryAddress: `0x${string}` 
+}) {
   const { writeContract, data: txHash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -226,11 +260,11 @@ function CreateProposalForm({ onClose }: { onClose: () => void }) {
     });
 
     writeContract({
-      address: CONTRACTS.governanceMultisig,
+      address: governanceAddress,
       abi: GOVERNANCE_MULTISIG_ABI,
       functionName: "propose",
       args: [
-        CONTRACTS.policyRegistry as Hex,
+        policyRegistryAddress as Hex,
         calldata as Hex,
         `Add policy: ${name}`,
       ],

@@ -1,14 +1,33 @@
 import { useParams, Link } from "react-router-dom";
 import { useReadContract } from "wagmi";
-import { FLARE_COSTON2_CHAIN, CONTRACTS, shortAddress, formatTimestamp, decodeCheckResults } from "../lib/constants";
+import { FLARE_COSTON2_CHAIN, shortAddress, formatTimestamp, decodeCheckResults } from "../lib/constants";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
+import { useMultisig } from "../context/MultisigContext";
 
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const policyId = BigInt(id ?? "0");
+  const { selectedMultisig, hasSelection } = useMultisig();
+
+  // Redirect to home if no multisig selected
+  if (!hasSelection) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold mb-4">No Multisig Selected</h2>
+        <p className="text-[var(--text-secondary)] mb-6">
+          Please select a multisig wallet to view policy details
+        </p>
+        <Link to="/" className="btn btn-primary">
+          Go to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const policyRegistryAddress = selectedMultisig!.policyRegistry;
 
   const { data: policy, isLoading } = useReadContract({
-    address: CONTRACTS.policyRegistry,
+    address: policyRegistryAddress,
     abi: POLICY_REGISTRY_ABI,
     functionName: "getPolicy",
     args: [policyId],

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interface/IPresetPolicyRegistry.sol";
 
-contract PolicyRegistry {
+contract PolicyRegistry is Initializable {
     address public governanceMultisig;
     address public provisioner;
     bool public provisioningLocked;
@@ -57,10 +58,12 @@ contract PolicyRegistry {
         _;
     }
 
-    constructor(address _governanceMultisig) {
+    function initialize(address _governanceMultisig) external initializer {
         governanceMultisig = _governanceMultisig;
         provisioner = msg.sender;
     }
+
+    constructor() {}
 
     function lockProvisioning() external {
         require(msg.sender == provisioner, "Only provisioner");

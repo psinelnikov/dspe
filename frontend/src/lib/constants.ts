@@ -14,11 +14,11 @@ export const FLARE_COSTON2_CHAIN = {
 } as const;
 
 export const CONTRACTS = {
+  walletFactory: import.meta.env.VITE_WALLET_FACTORY_ADDR as `0x${string}`,
   governanceMultisig: import.meta.env.VITE_GOVERNANCE_MULTISIG_ADDR as `0x${string}`,
   policyRegistry: import.meta.env.VITE_POLICY_REGISTRY_ADDR as `0x${string}`,
   auditLog: import.meta.env.VITE_AUDIT_LOG_ADDR as `0x${string}`,
   multisigWallet: import.meta.env.VITE_MULTISIG_WALLET_ADDR as `0x${string}`,
-  walletFactory: import.meta.env.VITE_WALLET_FACTORY_ADDR as `0x${string}`,
   presetPolicyRegistry: import.meta.env.VITE_PRESET_POLICY_REGISTRY_ADDR as `0x${string}`,
   instructionSender: import.meta.env.VITE_INSTRUCTION_SENDER_ADDR as `0x${string}`,
 } as const;

@@ -11,6 +11,7 @@ import "../src/PresetPolicyRegistry.sol";
 import "./mocks/MockTeeExtensionRegistry.sol";
 
 contract WalletFactoryTest is Test {
+    using Clones for address;
     WalletFactory public factory;
     MockTeeExtensionRegistry public mockRegistry;
     PresetPolicyRegistry public presetReg;
@@ -36,8 +37,15 @@ contract WalletFactoryTest is Test {
         presetReg = new PresetPolicyRegistry();
 
         MultisigWallet singleton = new MultisigWallet();
+        GovernanceMultisig govSingleton = new GovernanceMultisig();
+        PolicyRegistry policyRegSingleton = new PolicyRegistry();
+        AuditLog auditLogSingleton = new AuditLog();
+        
         factory = new WalletFactory(
             address(singleton),
+            address(govSingleton),
+            address(policyRegSingleton),
+            address(auditLogSingleton),
             address(mockRegistry),
             address(presetReg)
         );

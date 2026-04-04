@@ -257,6 +257,31 @@ export const WALLET_FACTORY_ABI = [
   },
   {
     type: "function",
+    name: "getWalletsForCreator",
+    stateMutability: "view",
+    inputs: [{ name: "_creator", type: "address" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple[]",
+        components: [
+          { name: "wallet", type: "address" },
+          { name: "governance", type: "address" },
+          { name: "policyRegistry", type: "address" },
+          { name: "auditLog", type: "address" },
+        ],
+      },
+    ],
+  },
+  {
+    type: "function",
+    name: "creatorWalletCount",
+    stateMutability: "view",
+    inputs: [{ name: "_creator", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "walletSingleton",
     stateMutability: "view",
     inputs: [],
@@ -280,6 +305,7 @@ export const WALLET_FACTORY_ABI = [
     type: "event",
     name: "WalletCreated",
     inputs: [
+      { name: "creator", type: "address", indexed: true },
       { name: "wallet", type: "address", indexed: true },
       { name: "governance", type: "address", indexed: true },
       { name: "policyRegistry", type: "address", indexed: false },

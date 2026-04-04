@@ -1,13 +1,33 @@
 import { useReadContracts } from "wagmi";
-import { FLARE_COSTON2_CHAIN, CONTRACTS, shortAddress, riskLabel } from "../lib/constants";
+import { FLARE_COSTON2_CHAIN, shortAddress, riskLabel } from "../lib/constants";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useMultisig } from "../context/MultisigContext";
 
 export default function PoliciesPage() {
+  const { selectedMultisig, hasSelection } = useMultisig();
+
+  // Redirect to home if no multisig selected
+  if (!hasSelection) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold mb-4">No Multisig Selected</h2>
+        <p className="text-[var(--text-secondary)] mb-6">
+          Please select a multisig wallet to view its policies
+        </p>
+        <Link to="/" className="btn btn-primary">
+          Go to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const policyRegistryAddress = selectedMultisig!.policyRegistry;
+
   const { data: countData, isLoading } = useReadContracts({
     contracts: [
       {
-        address: CONTRACTS.policyRegistry,
+        address: policyRegistryAddress,
         abi: POLICY_REGISTRY_ABI,
         functionName: "getPolicyCount",
         chainId: FLARE_COSTON2_CHAIN.id,
@@ -20,7 +40,7 @@ export default function PoliciesPage() {
   const { data: policies } = useReadContracts({
     contracts: count
       ? Array.from({ length: Number(count) }, (_, i) => ({
-          address: CONTRACTS.policyRegistry,
+          address: policyRegistryAddress,
           abi: POLICY_REGISTRY_ABI,
           functionName: "getPolicy",
           args: [BigInt(i)] as const,

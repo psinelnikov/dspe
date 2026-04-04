@@ -10,6 +10,9 @@ import "./PresetPolicyRegistry.sol";
 
 contract WalletFactory {
     address public immutable walletSingleton;
+    address public immutable governanceSingleton;
+    address public immutable policyRegistrySingleton;
+    address public immutable auditLogSingleton;
     address public immutable teeExtensionRegistry;
     address public immutable presetPolicyRegistry;
 
@@ -34,10 +37,16 @@ contract WalletFactory {
 
     constructor(
         address _walletSingleton,
+        address _governanceSingleton,
+        address _policyRegistrySingleton,
+        address _auditLogSingleton,
         address _teeExtensionRegistry,
         address _presetPolicyRegistry
     ) {
         walletSingleton = _walletSingleton;
+        governanceSingleton = _governanceSingleton;
+        policyRegistrySingleton = _policyRegistrySingleton;
+        auditLogSingleton = _auditLogSingleton;
         teeExtensionRegistry = _teeExtensionRegistry;
         presetPolicyRegistry = _presetPolicyRegistry;
     }
@@ -48,13 +57,20 @@ contract WalletFactory {
     ) external returns (WalletDeployment memory) {
         require(_signers.length > 0, "Need signers");
 
-        GovernanceMultisig gov = new GovernanceMultisig(_signers);
-        PolicyRegistry policyReg = new PolicyRegistry(address(gov));
-        AuditLog audit = new AuditLog();
+        address govProxy = Clones.clone(governanceSingleton);
+        address policyRegProxy = Clones.clone(policyRegistrySingleton);
+        address auditProxy = Clones.clone(auditLogSingleton);
+
+        GovernanceMultisig gov = GovernanceMultisig(govProxy);
+        PolicyRegistry policyReg = PolicyRegistry(policyRegProxy);
+        AuditLog audit = AuditLog(auditProxy);
+
+        gov.initialize(_signers);
+        policyReg.initialize(govProxy);
 
         address walletProxy = Clones.clone(walletSingleton);
         MultisigWallet wallet = MultisigWallet(payable(walletProxy));
-        wallet.initialize(address(audit), teeExtensionRegistry, address(gov));
+        wallet.initialize(auditProxy, teeExtensionRegistry, govProxy);
 
         if (_presetPolicyIds.length > 0) {
             policyReg.addPresetPolicies(_presetPolicyIds, _signers, presetPolicyRegistry);
@@ -63,15 +79,15 @@ contract WalletFactory {
 
         WalletDeployment memory deployment = WalletDeployment({
             wallet: walletProxy,
-            governance: address(gov),
-            policyRegistry: address(policyReg),
-            auditLog: address(audit)
+            governance: govProxy,
+            policyRegistry: policyRegProxy,
+            auditLog: auditProxy
         });
 
         creatorWallets[msg.sender].push(deployment);
         creatorWalletCount[msg.sender]++;
 
-        emit WalletCreated(msg.sender, walletProxy, address(gov), address(policyReg), address(audit), _signers);
+        emit WalletCreated(msg.sender, walletProxy, govProxy, policyRegProxy, auditProxy, _signers);
 
         return deployment;
     }

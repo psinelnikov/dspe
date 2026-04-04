@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../src/GovernanceMultisig.sol";
 import "../src/PolicyRegistry.sol";
 import "../src/AuditLog.sol";
@@ -14,6 +15,7 @@ contract MockTarget {
 }
 
 contract MultisigPolicyTest is Test {
+    using Clones for address;
     GovernanceMultisig public gov;
     PolicyRegistry public policyReg;
     AuditLog public auditLog;
@@ -34,11 +36,21 @@ contract MultisigPolicyTest is Test {
         signers.push(bob);
         signers.push(carol);
 
-        gov = new GovernanceMultisig(signers);
-        policyReg = new PolicyRegistry(address(gov));
-        auditLog = new AuditLog();
+        GovernanceMultisig govSingleton = new GovernanceMultisig();
+        PolicyRegistry policyRegSingleton = new PolicyRegistry();
+        AuditLog auditLogSingleton = new AuditLog();
+        
+        gov = GovernanceMultisig(Clones.clone(address(govSingleton)));
+        gov.initialize(signers);
+        
+        policyReg = PolicyRegistry(Clones.clone(address(policyRegSingleton)));
+        policyReg.initialize(address(gov));
+        
+        auditLog = AuditLog(Clones.clone(address(auditLogSingleton)));
         mockRegistry = new MockTeeExtensionRegistry();
-        wallet = new MultisigWallet();
+        
+        MultisigWallet walletSingleton = new MultisigWallet();
+        wallet = MultisigWallet(payable(Clones.clone(address(walletSingleton))));
         wallet.initialize(address(auditLog), address(mockRegistry), address(gov));
     }
 
@@ -56,8 +68,12 @@ contract MultisigPolicyTest is Test {
         address[] memory badSigners = new address[](2);
         badSigners[0] = alice;
         badSigners[1] = alice;
+        
+        GovernanceMultisig govSingleton = new GovernanceMultisig();
+        address badGov = Clones.clone(address(govSingleton));
+        
         vm.expectRevert("Duplicate signer");
-        new GovernanceMultisig(badSigners);
+        GovernanceMultisig(badGov).initialize(badSigners);
     }
 
     function test_Propose() public {

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract GovernanceMultisig {
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
+contract GovernanceMultisig is Initializable {
     address[] public signers;
     mapping(address => bool) public isSigner;
     uint256 public proposalCount;
@@ -24,7 +26,7 @@ contract GovernanceMultisig {
         _;
     }
 
-    constructor(address[] memory _signers) {
+    function initialize(address[] calldata _signers) external initializer {
         require(_signers.length > 0, "Need signers");
         for (uint256 i = 0; i < _signers.length; i++) {
             require(_signers[i] != address(0), "Zero address");
@@ -33,6 +35,8 @@ contract GovernanceMultisig {
             isSigner[_signers[i]] = true;
         }
     }
+
+    constructor() {}
 
     function getSigners() external view returns (address[] memory) {
         return signers;

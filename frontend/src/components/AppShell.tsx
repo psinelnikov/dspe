@@ -1,11 +1,13 @@
 import { type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, useLocation, Link } from "react-router-dom";
 import { wagmiConfig } from "../lib/wagmi";
 import { queryClient } from "../lib/query";
 import { ConnectButton } from "./ConnectButton";
 import { NetworkStatus } from "./NetworkStatus";
+import { MultisigProvider, useMultisig } from "../context/MultisigContext";
+import HomePage from "../pages/HomePage";
 import PoliciesPage from "../pages/PoliciesPage";
 import AuditLogPage from "../pages/AuditLogPage";
 import GovernancePage from "../pages/GovernancePage";
@@ -13,7 +15,8 @@ import PolicyDetailPage from "../pages/PolicyDetailPage";
 import OnboardingPage from "../pages/OnboardingPage";
 
 const NAV_LINKS = [
-  { to: "/", label: "Policies", end: true },
+  { to: "/", label: "Home", end: true },
+  { to: "/policies", label: "Policies", end: true },
   { to: "/audit", label: "Audit Log", end: false },
   { to: "/governance", label: "Governance", end: false },
   { to: "/onboarding", label: "+ New Wallet", end: false },
@@ -21,16 +24,17 @@ const NAV_LINKS = [
 
 function Shell({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const isOnboardingPage = location.pathname === "/onboarding";
+  const isHomePage = location.pathname === "/";
+  const { selectedMultisig, hasSelection, clearSelection } = useMultisig();
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <h1 className="text-lg font-bold text-[var(--accent)]">
+            <Link to="/" className="text-lg font-bold text-[var(--accent)] hover:opacity-80">
               Multisig Policy Engine
-            </h1>
+            </Link>
             <nav className="flex gap-1">
               {NAV_LINKS.map((link) => (
                 <NavLink
@@ -53,6 +57,18 @@ function Shell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {hasSelection && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-card)] rounded-md">
+                <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
+                <span className="text-sm font-mono">{selectedMultisig?.governance.slice(0, 8)}...</span>
+                <button
+                  onClick={clearSelection}
+                  className="text-xs text-[var(--red)] hover:underline"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <ConnectButton />
           </div>
         </div>
@@ -71,17 +87,20 @@ export default function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Shell>
-            <Routes>
-              <Route path="/" element={<PoliciesPage />} />
-              <Route path="/policy/:id" element={<PolicyDetailPage />} />
-              <Route path="/audit" element={<AuditLogPage />} />
-              <Route path="/governance" element={<GovernancePage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
-            </Routes>
-          </Shell>
-        </BrowserRouter>
+        <MultisigProvider>
+          <BrowserRouter>
+            <Shell>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/policies" element={<PoliciesPage />} />
+                <Route path="/policy/:id" element={<PolicyDetailPage />} />
+                <Route path="/audit" element={<AuditLogPage />} />
+                <Route path="/governance" element={<GovernancePage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+              </Routes>
+            </Shell>
+          </BrowserRouter>
+        </MultisigProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useState, useCallback, useEffect } from "react";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
+import { decodeEventLog, parseAbiItem } from "viem";
 import { FLARE_COSTON2_CHAIN, CONTRACTS, PRESET_DESCRIPTIONS, shortAddress, explorerUrl } from "../lib/constants";
 import { WALLET_FACTORY_ABI } from "../lib/abi";
 
@@ -462,10 +463,109 @@ function DeployStep({
   selectedPresets: Set<number>;
   onDone: (result: DeploymentResult) => void;
 }) {
+  const publicClient = usePublicClient();
   const { writeContract, data: txHash, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ 
+    hash: txHash 
+  });
+  const [receipt, setReceipt] = useState<Awaited<ReturnType<NonNullable<typeof publicClient>['getTransactionReceipt']>> | null>(null);
 
   const presetIds = Array.from(selectedPresets).sort().map(BigInt);
+
+  // Fetch full receipt with logs when transaction succeeds
+  useEffect(() => {
+    if (isSuccess && txHash && publicClient && !receipt) {
+      console.log("Fetching full transaction receipt for:", txHash);
+      
+      publicClient.getTransactionReceipt({ hash: txHash }).then((fullReceipt) => {
+        console.log("Full receipt:", fullReceipt);
+        
+        // If receipt has no logs, fetch them separately
+        if (!fullReceipt.logs || fullReceipt.logs.length === 0) {
+          console.log("Receipt has no logs, fetching via getLogs...");
+          
+          publicClient.getLogs({
+            address: CONTRACTS.walletFactory,
+            fromBlock: fullReceipt.blockNumber,
+            toBlock: fullReceipt.blockNumber,
+          }).then((logs) => {
+            console.log("Logs from getLogs:", logs);
+            
+            // Filter logs for this transaction
+            const txLogs = logs.filter(log => 
+              log.transactionHash.toLowerCase() === txHash.toLowerCase()
+            );
+            
+            // Merge into receipt
+            (fullReceipt as typeof fullReceipt & { logs: typeof logs }).logs = txLogs;
+            setReceipt(fullReceipt);
+          }).catch((err) => {
+            console.error("Failed to fetch logs:", err);
+            setReceipt(fullReceipt);
+          });
+        } else {
+          setReceipt(fullReceipt);
+        }
+      }).catch((err) => {
+        console.error("Failed to fetch receipt:", err);
+      });
+    }
+  }, [isSuccess, txHash, publicClient, receipt]);
+
+  // Parse event logs when we have the full receipt
+  useEffect(() => {
+    if (receipt && publicClient) {
+      console.log("Processing receipt with logs:", receipt.logs?.length || 0);
+      
+      if (!receipt.logs || receipt.logs.length === 0) {
+        console.warn("No logs in receipt");
+        return;
+      }
+      
+      // Find WalletCreated event by trying to decode all logs from WalletFactory
+      for (const log of receipt.logs) {
+        // Only check logs from WalletFactory contract
+        if (log.address.toLowerCase() !== CONTRACTS.walletFactory.toLowerCase()) {
+          continue;
+        }
+        
+        try {
+          // Try to decode as WalletCreated event
+          const decoded = decodeEventLog({
+            abi: WALLET_FACTORY_ABI,
+            eventName: "WalletCreated",
+            data: log.data,
+            topics: log.topics,
+          });
+
+          // Extract addresses from decoded args
+          const args = decoded.args as unknown as {
+            creator: `0x${string}`;
+            wallet: `0x${string}`;
+            governance: `0x${string}`;
+            policyRegistry: `0x${string}`;
+            auditLog: `0x${string}`;
+            signers: `0x${string}`[];
+          };
+
+          console.log("Found WalletCreated event with wallet:", args.wallet);
+
+          onDone({
+            wallet: args.wallet,
+            governance: args.governance,
+            policyRegistry: args.policyRegistry,
+            auditLog: args.auditLog,
+          });
+          return; // Exit after finding the event
+        } catch {
+          // Not the WalletCreated event, continue to next log
+          continue;
+        }
+      }
+      
+      console.error("WalletCreated event not found in logs");
+    }
+  }, [receipt, publicClient, onDone]);
 
   if (isSuccess) {
     return (

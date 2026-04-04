@@ -1,16 +1,36 @@
 import { useState } from "react";
 import { useReadContracts } from "wagmi";
-import { FLARE_COSTON2_CHAIN, CONTRACTS, riskColor, riskLabel, formatTimestamp, decodeCheckResults, shortAddress } from "../lib/constants";
+import { FLARE_COSTON2_CHAIN, riskColor, riskLabel, formatTimestamp, decodeCheckResults } from "../lib/constants";
 import { AUDIT_LOG_ABI } from "../lib/abi";
+import { Link } from "react-router-dom";
+import { useMultisig } from "../context/MultisigContext";
 
 export default function AuditLogPage() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
+  const { selectedMultisig, hasSelection } = useMultisig();
+
+  // Redirect to home if no multisig selected
+  if (!hasSelection) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold mb-4">No Multisig Selected</h2>
+        <p className="text-[var(--text-secondary)] mb-6">
+          Please select a multisig wallet to view its audit log
+        </p>
+        <Link to="/" className="btn btn-primary">
+          Go to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const auditLogAddress = selectedMultisig!.auditLog;
 
   const { data: countData, isLoading: countLoading } = useReadContracts({
     contracts: [
       {
-        address: CONTRACTS.auditLog,
+        address: auditLogAddress,
         abi: AUDIT_LOG_ABI,
         functionName: "getEntryCount",
         chainId: FLARE_COSTON2_CHAIN.id,
@@ -26,7 +46,7 @@ export default function AuditLogPage() {
       ? Array.from(
           { length: Math.min(PAGE_SIZE, Number(total) - page * PAGE_SIZE) },
           (_, i) => ({
-            address: CONTRACTS.auditLog,
+            address: auditLogAddress,
             abi: AUDIT_LOG_ABI,
             functionName: "getEntry",
             args: [BigInt(page * PAGE_SIZE + i)] as const,

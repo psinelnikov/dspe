@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract AuditLog {
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
+contract AuditLog is Initializable {
     struct AuditEntry {
         bytes32 evaluationId;
         uint256 policyId;
@@ -14,6 +16,8 @@ contract AuditLog {
     }
 
     AuditEntry[] public entries;
+
+    constructor() {}
 
     function postEntry(AuditEntry calldata _entry) external {
         entries.push(_entry);
