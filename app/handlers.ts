@@ -101,7 +101,7 @@ export async function handleEvaluate(
       pv = { date: today(), totalUsd: 0n };
     }
 
-    const checks = runSimulation(request, typedPolicy, txValueUsd, pv.totalUsd);
+    const checks = await runSimulation(request, typedPolicy, txValueUsd, pv.totalUsd);
     const score = computeScore(checks, typedPolicy.riskWeight);
 
     if (score > highestScore) {

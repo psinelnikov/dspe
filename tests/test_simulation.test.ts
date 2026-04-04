@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { analyzeBytecode } from "../app/checks/bytecode.js";
 import {
   checkAllowlist,
@@ -10,6 +10,24 @@ import { matchesConditions, mapScoreToThreshold } from "../app/policy_matcher.js
 import { computeScore, runSimulation } from "../app/simulation.js";
 import { hexToBytes, bytesToHex, bytes32ToString, stringToBytes32 } from "../base/utils.js";
 import type { EvaluateRequest, Policy, SimulationResult, Conditions, Limits } from "../app/types.js";
+
+vi.mock("../app/rpc.js", () => ({
+  getEthCode: vi.fn().mockResolvedValue("0x600160005260206000f3"),
+  getBlockNumber: vi.fn().mockResolvedValue(2000000n),
+  getTransactionCount: vi.fn().mockResolvedValue(500),
+  fetchActivePolicies: vi.fn(),
+  getCurrentBlockTimestamp: vi.fn(),
+  client: {},
+  flareCoston2: {},
+}));
+
+vi.mock("../app/checks/verification.js", () => ({
+  checkContractVerified: vi.fn().mockResolvedValue([true, 0]),
+}));
+
+vi.mock("../app/checks/erc7730.js", () => ({
+  checkErc7730Registry: vi.fn().mockResolvedValue([true, 0]),
+}));
 
 const MOCK_TARGET = "0x1234567890123456789012345678901234567890" as `0x${string}`;
 const MOCK_ALLOW_TARGET = "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" as `0x${string}`;
@@ -360,7 +378,7 @@ describe("threshold mapping", () => {
 // ── Simulation Integration ──
 
 describe("simulation integration", () => {
-  it("low-risk scenario produces low score", () => {
+  it("low-risk scenario produces low score", async () => {
     const request = makeRequest({
       target: MOCK_ALLOW_TARGET,
       calldata: "0x12345678" as `0x${string}`,
@@ -377,17 +395,15 @@ describe("simulation integration", () => {
       riskWeight: 1,
     });
 
-    const result = runSimulation(request, policy, 10n * 10n ** 18n, 0n);
+    const result = await runSimulation(request, policy, 10n * 10n ** 18n, 0n);
     const score = computeScore(result, policy.riskWeight);
 
     expect(score).toBeLessThan(30);
-    // Allowlist should pass
     expect(result.bitmap & (1 << 0)).toBeTruthy();
-    // Denylist should pass
     expect(result.bitmap & (1 << 1)).toBeTruthy();
   });
 
-  it("high-risk denylist scenario produces high score", () => {
+  it("high-risk denylist scenario produces high score", async () => {
     const request = makeRequest({
       target: MOCK_DENY_TARGET,
       value: 50000n * 10n ** 18n,
@@ -403,15 +419,14 @@ describe("simulation integration", () => {
       riskWeight: 8,
     });
 
-    const result = runSimulation(request, policy, 50000n * 10n ** 18n, 0n);
+    const result = await runSimulation(request, policy, 50000n * 10n ** 18n, 0n);
     const score = computeScore(result, policy.riskWeight);
 
     expect(score).toBeGreaterThanOrEqual(90);
-    // Denylist should fail
     expect(result.bitmap & (1 << 1)).toBeFalsy();
   });
 
-  it("highest-risk-wins across multiple policies", () => {
+  it("highest-risk-wins across multiple policies", async () => {
     const request = makeRequest({ value: 1000n * 10n ** 18n });
 
     const policyA = makePolicy({
@@ -436,8 +451,8 @@ describe("simulation integration", () => {
       },
     });
 
-    const resultA = runSimulation(request, policyA, 1000n * 10n ** 18n, 0n);
-    const resultB = runSimulation(request, policyB, 1000n * 10n ** 18n, 0n);
+    const resultA = await runSimulation(request, policyA, 1000n * 10n ** 18n, 0n);
+    const resultB = await runSimulation(request, policyB, 1000n * 10n ** 18n, 0n);
     const scoreA = computeScore(resultA, policyA.riskWeight);
     const scoreB = computeScore(resultB, policyB.riskWeight);
 

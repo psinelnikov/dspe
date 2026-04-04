@@ -1,8 +1,5 @@
-import { getEthCode, getBlockNumber } from "../rpc.js";
+import { getEthCode, getBlockNumber, getTransactionCount } from "../rpc.js";
 
-// COMPLEXITY NOTE: Binary search for contract deploy block makes O(log N) RPC calls.
-// On Coston2 (~2M blocks) that's ~21 calls. Acceptable for MVP.
-// For production, use the block explorer's contract creation API instead.
 export async function checkContractAge(target: `0x${string}`): Promise<[boolean, number]> {
   const currentBlock = await getBlockNumber();
   const currentCode = await getEthCode(target);
@@ -28,5 +25,13 @@ export async function checkContractAge(target: `0x${string}`): Promise<[boolean,
   if (ageInBlocks < 100) return [false, 85];
   if (ageInBlocks < 10000) return [true, 50];
   if (ageInBlocks < 100000) return [true, 20];
+  return [true, 5];
+}
+
+export async function checkTxVolume(target: `0x${string}`): Promise<[boolean, number]> {
+  const txCount = await getTransactionCount(target);
+  if (txCount < 10) return [false, 70];
+  if (txCount < 100) return [false, 40];
+  if (txCount < 1000) return [true, 15];
   return [true, 5];
 }
