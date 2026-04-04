@@ -16,12 +16,10 @@ import OnboardingPage from "../pages/OnboardingPage";
 import TestTransactionsPage from "../pages/TestTransactionsPage";
 
 const NAV_LINKS = [
-  { to: "/", label: "Home", end: true },
   { to: "/policies", label: "Policies", end: true },
   { to: "/test", label: "Test", end: true },
   { to: "/audit", label: "Audit Log", end: false },
   { to: "/governance", label: "Governance", end: false },
-  { to: "/onboarding", label: "+ New Wallet", end: false },
 ];
 
 function Shell({ children }: { children: ReactNode }) {
@@ -47,9 +45,7 @@ function Shell({ children }: { children: ReactNode }) {
                     `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-[var(--accent)] text-black"
-                        : link.label === "+ New Wallet"
-                          ? "text-[var(--green)] hover:bg-[var(--bg-card)]"
-                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]"
                     }`
                   }
                 >

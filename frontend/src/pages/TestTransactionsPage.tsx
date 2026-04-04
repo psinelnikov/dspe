@@ -65,15 +65,11 @@ export default function TestTransactionsPage() {
   
   const [activeTab, setActiveTab] = useState<"scenarios" | "erc20" | "mint" | "custom" | "tee">("scenarios");
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null);
-  const [transferType, setTransferType] = useState<"native" | "erc20">("erc20");
   
   // ERC20 specific state
   const [tokenBalance, setTokenBalance] = useState<string>("0");
   const [erc20Target, setErc20Target] = useState("");
   const [erc20Amount, setErc20Amount] = useState("");
-  
-  // Mint state
-  const [mintAmount, setMintAmount] = useState("");
   
   // Custom transaction state
   const [customTarget, setCustomTarget] = useState("");
@@ -208,23 +204,11 @@ export default function TestTransactionsPage() {
     setSelectedScenario(scenario.id);
     setTeeError(null);
     
-    let transferData: `0x${string}`;
-    let target: Address;
-    let value: bigint;
-    
-    if (transferType === "erc20") {
-      target = CONTRACTS.testToken;
-      value = 0n;
-      transferData = encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "transfer",
-        args: [address, parseUnits(scenario.tokenValue, 18)],
-      });
-    } else {
-      target = address;
-      value = parseEther(scenario.value);
-      transferData = "0x";
-    }
+    const transferData = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: "transfer",
+      args: [address, parseUnits(scenario.tokenValue, 18)],
+    });
     
     // Step 1: Submit transaction to MultisigWallet
     setSubmittedTxId(txId);
@@ -233,8 +217,8 @@ export default function TestTransactionsPage() {
       address: selectedMultisig.wallet,
       abi: MULTISIG_WALLET_ABI,
       functionName: "submitTransaction",
-      args: [target, transferData, nonce],
-      value: value,
+      args: [CONTRACTS.testToken, transferData, nonce],
+      value: 0n,
     });
   };
 
@@ -310,13 +294,13 @@ export default function TestTransactionsPage() {
   };
 
   const handleMintToMultisig = () => {
-    if (!selectedMultisig || !mintAmount) return;
+    if (!selectedMultisig) return;
     
     writeContract({
       address: CONTRACTS.testToken,
       abi: ERC20_ABI,
       functionName: "mint",
-      args: [selectedMultisig.wallet, parseUnits(mintAmount, 18)],
+      args: [selectedMultisig.wallet, parseUnits("100000", 18)],
     });
   };
 
@@ -426,7 +410,7 @@ export default function TestTransactionsPage() {
         </div>
         {teePublicKey && (
           <div className="bg-[var(--green)] bg-opacity-10 border border-[var(--green)] rounded-md px-3 py-1.5">
-            <span className="text-xs text-[var(--green)]">TEE Connected</span>
+            <span className="text-xs text-black">TEE Connected</span>
           </div>
         )}
       </div>
@@ -486,33 +470,6 @@ export default function TestTransactionsPage() {
 
       {activeTab === "scenarios" && (
         <div className="space-y-4">
-          {/* Transfer Type Toggle */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 mb-4">
-            <label className="block text-sm font-medium mb-2">Transfer Type</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTransferType("erc20")}
-                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-                  transferType === "erc20"
-                    ? "bg-[var(--accent)] text-black"
-                    : "bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--border)]"
-                }`}
-              >
-                ERC20 (THVT) - High Value
-              </button>
-              <button
-                onClick={() => setTransferType("native")}
-                className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-                  transferType === "native"
-                    ? "bg-[var(--accent)] text-black"
-                    : "bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--border)]"
-                }`}
-              >
-                Native (C2FLR) - Low Value
-              </button>
-            </div>
-          </div>
-
           {TEST_SCENARIOS.map((scenario) => (
             <div
               key={scenario.id}
@@ -544,10 +501,7 @@ export default function TestTransactionsPage() {
                 <div className="bg-[var(--bg-secondary)] rounded-md p-3">
                   <div className="text-[var(--text-secondary)] mb-1">Value</div>
                   <div className="font-mono">
-                    {transferType === "erc20" 
-                      ? `${Number(scenario.tokenValue).toLocaleString()} THVT`
-                      : `${scenario.value} C2FLR`
-                    }
+                    {`${Number(scenario.tokenValue).toLocaleString()} THVT`}
                   </div>
                 </div>
                 <div className="bg-[var(--bg-secondary)] rounded-md p-3">
@@ -820,38 +774,12 @@ export default function TestTransactionsPage() {
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Amount to Mint (THVT)</label>
-              <input
-                type="text"
-                value={mintAmount}
-                onChange={(e) => setMintAmount(e.target.value)}
-                placeholder="100000"
-                className="w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-md text-[var(--text-primary)]"
-              />
-              <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Enter amount in whole THVT tokens (18 decimals). Large amounts enable high-value transfer testing.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {["10000", "100000", "1000000", "10000000"].map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => setMintAmount(amount)}
-                  className="px-3 py-2 bg-[var(--bg-secondary)] text-sm rounded-md hover:bg-[var(--border)] transition-colors"
-                >
-                  {Number(amount).toLocaleString()}
-                </button>
-              ))}
-            </div>
-
             <button
               onClick={handleMintToMultisig}
-              disabled={isPending || isConfirming || !mintAmount}
+              disabled={isPending || isConfirming}
               className="w-full px-4 py-2 bg-[var(--accent)] text-black rounded-md hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? "Minting..." : isConfirming ? "Confirming..." : "Mint to Multisig"}
+              {isPending ? "Minting..." : isConfirming ? "Confirming..." : "Mint 100,000 THVT"}
             </button>
 
             <p className="text-xs text-[var(--text-secondary)] text-center">
