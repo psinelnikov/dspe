@@ -54,17 +54,20 @@ export function ConnectButton() {
     );
   }
 
+  // Find MetaMask connector first, fallback to any available connector
+  const metaMaskConnector = connectors.find(c => c.name.toLowerCase().includes('metamask'));
+  const primaryConnector = metaMaskConnector || connectors[0];
+
+  if (!primaryConnector) {
+    return null;
+  }
+
   return (
-    <div className="flex gap-2">
-      {connectors.map((connector) => (
-        <button
-          key={connector.uid}
-          onClick={() => connect({ connector, chainId: FLARE_COSTON2_CHAIN.id })}
-          className="btn btn-primary"
-        >
-          Connect Wallet
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={() => connect({ connector: primaryConnector, chainId: FLARE_COSTON2_CHAIN.id })}
+      className="btn btn-primary"
+    >
+      Connect Wallet
+    </button>
   );
 }

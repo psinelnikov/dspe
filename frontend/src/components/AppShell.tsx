@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { wagmiConfig } from "../lib/wagmi";
 import { queryClient } from "../lib/query";
 import { ConnectButton } from "./ConnectButton";
@@ -20,6 +20,9 @@ const NAV_LINKS = [
 ];
 
 function Shell({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const isOnboardingPage = location.pathname === "/onboarding";
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
@@ -50,7 +53,6 @@ function Shell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <NetworkStatus />
             <ConnectButton />
           </div>
         </div>
@@ -59,7 +61,7 @@ function Shell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-[var(--border)] py-3 text-center text-xs text-[var(--text-secondary)]">
-        Flare Coston2 &middot; Multisig Policy Engine v0.1.0
+        Multisig Policy Engine v0.1.0
       </footer>
     </div>
   );

@@ -10,7 +10,7 @@ export function NetworkStatus() {
       <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
         <span className="text-xs text-green-500 font-medium">
-          {FLARE_COSTON2_CHAIN.name}
+          Connected
         </span>
       </div>
     );
@@ -20,7 +20,7 @@ export function NetworkStatus() {
     <div className="flex items-center gap-2 px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded-full">
       <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
       <span className="text-xs text-orange-500 font-medium">
-        Wrong Network ({chainId})
+        Wrong Network
       </span>
     </div>
   );
