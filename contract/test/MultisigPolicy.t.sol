@@ -38,7 +38,8 @@ contract MultisigPolicyTest is Test {
         policyReg = new PolicyRegistry(address(gov));
         auditLog = new AuditLog();
         mockRegistry = new MockTeeExtensionRegistry();
-        wallet = new MultisigWallet(address(auditLog), address(mockRegistry));
+        wallet = new MultisigWallet();
+        wallet.initialize(address(auditLog), address(mockRegistry), address(gov));
     }
 
     // --- GovernanceMultisig tests ---
@@ -179,7 +180,9 @@ contract MultisigPolicyTest is Test {
         address[] memory pSigners = new address[](1);
         pSigners[0] = alice;
 
-        vm.expectRevert("Only governance multisig");
+        policyReg.lockProvisioning();
+
+        vm.expectRevert("Only governance or provisioner");
         policyReg.addPolicy("Bad", conditions, limits, pSigners, 5);
     }
 

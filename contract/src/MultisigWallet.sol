@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./AuditLog.sol";
 import "./TeeVerifier.sol";
 import "./interface/ITeeExtensionRegistry.sol";
 
-contract MultisigWallet {
+contract MultisigWallet is Initializable {
     AuditLog public auditLog;
     ITeeExtensionRegistry public teeExtensionRegistry;
+    address public governance;
 
     struct Transaction {
         address target;
@@ -41,9 +43,16 @@ contract MultisigWallet {
     event TxApproved(uint256 indexed txId, address indexed signer);
     event TxExecuted(uint256 indexed txId);
 
-    constructor(address _auditLog, address _teeExtensionRegistry) {
+    constructor() {}
+
+    function initialize(
+        address _auditLog,
+        address _teeExtensionRegistry,
+        address _governance
+    ) external initializer {
         auditLog = AuditLog(_auditLog);
         teeExtensionRegistry = ITeeExtensionRegistry(_teeExtensionRegistry);
+        governance = _governance;
     }
 
     function submitTransaction(
@@ -204,4 +213,6 @@ contract MultisigWallet {
             t.instructionId
         );
     }
+
+    receive() external payable {}
 }

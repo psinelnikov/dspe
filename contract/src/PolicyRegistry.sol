@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./interface/IPresetPolicyRegistry.sol";
+
 contract PolicyRegistry {
     address public governanceMultisig;
+    address public provisioner;
+    bool public provisioningLocked;
 
     struct Conditions {
         address[] targetAddresses;
@@ -37,13 +41,32 @@ contract PolicyRegistry {
     Policy[] public policies;
     uint256 public nextPolicyId;
 
+    event PolicyAdded(uint256 indexed policyId, string name);
+    event ProvisioningLocked();
+
     modifier onlyGovernance() {
         require(msg.sender == governanceMultisig, "Only governance multisig");
         _;
     }
 
+    modifier onlyGovernanceOrProvisioner() {
+        require(
+            msg.sender == governanceMultisig || (!provisioningLocked && msg.sender == provisioner),
+            "Only governance or provisioner"
+        );
+        _;
+    }
+
     constructor(address _governanceMultisig) {
         governanceMultisig = _governanceMultisig;
+        provisioner = msg.sender;
+    }
+
+    function lockProvisioning() external {
+        require(msg.sender == provisioner, "Only provisioner");
+        require(!provisioningLocked, "Already locked");
+        provisioningLocked = true;
+        emit ProvisioningLocked();
     }
 
     function getPolicyCount() external view returns (uint256) {
@@ -89,7 +112,64 @@ contract PolicyRegistry {
         Limits calldata _limits,
         address[] calldata _signers,
         uint8 _riskWeight
-    ) external onlyGovernance returns (uint256) {
+    ) external onlyGovernanceOrProvisioner returns (uint256) {
+        return _addPolicyInternal(_name, _conditions, _limits, _signers, _riskWeight);
+    }
+
+    function addPresetPolicies(
+        uint256[] calldata _presetIds,
+        address[] calldata _signers,
+        address _presetRegistry
+    ) external onlyGovernanceOrProvisioner returns (uint256[] memory) {
+        uint256 len = _presetIds.length;
+        uint256[] memory addedIds = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            addedIds[i] = _addPresetPolicy(_presetRegistry, _presetIds[i], _signers);
+        }
+        return addedIds;
+    }
+
+    function _addPresetPolicy(
+        address _registry,
+        uint256 _presetId,
+        address[] memory _signers
+    ) internal returns (uint256) {
+        IPresetPolicyRegistry reg = IPresetPolicyRegistry(_registry);
+
+        Conditions memory conditions = Conditions({
+            targetAddresses: reg.presetTargetAddresses(_presetId),
+            functionSelectors: reg.presetFunctionSelectors(_presetId),
+            minValue: reg.presetMinValue(_presetId),
+            maxValue: reg.presetMaxValue(_presetId),
+            timeWindowStart: reg.presetTimeWindowStart(_presetId),
+            timeWindowEnd: reg.presetTimeWindowEnd(_presetId),
+            requireVerified: reg.presetRequireVerified(_presetId),
+            requireErc7730: reg.presetRequireErc7730(_presetId)
+        });
+
+        Limits memory limits = Limits({
+            maxValuePerTxUsd: reg.presetMaxValuePerTxUsd(_presetId),
+            maxValueDailyUsd: reg.presetMaxValueDailyUsd(_presetId),
+            allowlist: reg.presetAllowlist(_presetId),
+            denylist: reg.presetDenylist(_presetId)
+        });
+
+        return _addPolicyInternal(
+            reg.presetName(_presetId),
+            conditions,
+            limits,
+            _signers,
+            reg.presetRiskWeight(_presetId)
+        );
+    }
+
+    function _addPolicyInternal(
+        string memory _name,
+        Conditions memory _conditions,
+        Limits memory _limits,
+        address[] memory _signers,
+        uint8 _riskWeight
+    ) internal returns (uint256) {
         require(_signers.length > 0, "Must have signers");
         require(_riskWeight >= 1 && _riskWeight <= 10, "Weight 1-10");
 
@@ -105,6 +185,7 @@ contract PolicyRegistry {
         p.riskWeight = _riskWeight;
         p.createdAt = block.number;
         p.updatedAt = block.number;
+        emit PolicyAdded(id, _name);
         return id;
     }
 
