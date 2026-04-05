@@ -22,7 +22,7 @@ interface Transaction {
   instructionId: `0x${string}`;
   approvalCount: number;
   requiredSignerSet?: Address[];
-  thvtValue?: string;
+  usdcValue?: string;
 }
 
 export default function PendingTransactionsPage() {
@@ -71,7 +71,7 @@ export default function PendingTransactionsPage() {
 
           if (!result[4]) { // not executed
             const data = result[1] as `0x${string}`;
-            let thvtValue: string | undefined;
+            let usdcValue: string | undefined;
             
             // Try to decode ERC20 transfer data
             if (data && data !== "0x" && data.length >= 138) {
@@ -81,7 +81,7 @@ export default function PendingTransactionsPage() {
                   data: data,
                 });
                 if (decoded.functionName === "transfer" && decoded.args && decoded.args[1]) {
-                  thvtValue = formatEther(decoded.args[1] as bigint);
+                  usdcValue = formatEther(decoded.args[1] as bigint);
                 }
               } catch {
                 // Not an ERC20 transfer, ignore
@@ -102,7 +102,7 @@ export default function PendingTransactionsPage() {
               matchedPolicyId: result[9] as bigint,
               instructionId: result[10] as `0x${string}`,
               approvalCount: Number(approvalCount),
-              thvtValue,
+              usdcValue,
             });
           }
         }
@@ -259,10 +259,10 @@ export default function PendingTransactionsPage() {
                         <span className="text-[var(--text-secondary)]">Target:</span>{" "}
                         <CopyableAddress address={tx.target} />
                       </div>
-                      {tx.thvtValue && (
+                      {tx.usdcValue && (
                         <div>
-                          <span className="text-[var(--text-secondary)]">THVT Amount:</span>{" "}
-                          <span className="font-mono text-[var(--accent)]">{tx.thvtValue} THVT</span>
+                          <span className="text-[var(--text-secondary)]">USDC Amount:</span>{" "}
+                          <span className="font-mono text-[var(--accent)]">{tx.usdcValue} USDC</span>
                         </div>
                       )}
                       {tx.evaluated && (

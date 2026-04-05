@@ -25,22 +25,22 @@ const TEST_SCENARIOS = [
     expectedRiskScore: 15,
     policyId: 0,
     expectedRequiredSigners: 1,
-    tokenValue: "1000",
+    tokenValue: "500",
   },
   {
     id: 1,
-    name: "Medium Value Transfer",
-    description: "Test multi-sig requirement for $1K-$50K transfers",
+    name: "High-Value Transfer",
+    description: "Test policy for transfers over 1000 USDC requiring 2 signers",
     value: "0.001",
     expectedRiskScore: 45,
     policyId: 1,
     expectedRequiredSigners: 2,
-    tokenValue: "10000",
+    tokenValue: "1500",
   },
   {
     id: 2,
-    name: "High Value Transfer",
-    description: "Test admin-level policy for large transfers",
+    name: "Very High Value Transfer",
+    description: "Test admin-level policy for very large transfers >$50K",
     value: "0.01",
     expectedRiskScore: 85,
     policyId: 2,
@@ -650,8 +650,8 @@ export default function TestTransactionsPage() {
       </p>
       <div className="flex items-center gap-4 mb-6">
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-md px-3 py-1.5 flex items-center gap-2">
-          <span className="text-xs text-[var(--text-secondary)]">THVT Balance: </span>
-          <span className="text-sm font-mono font-medium">{tokenBalance} THVT</span>
+          <span className="text-xs text-[var(--text-secondary)]">USDC Balance: </span>
+          <span className="text-sm font-mono font-medium">{tokenBalance} USDC</span>
           <button 
             onClick={fetchBalance}
             className="text-xs text-[var(--accent)] hover:text-[var(--text-primary)] ml-2"
@@ -756,7 +756,7 @@ export default function TestTransactionsPage() {
                 <div className="bg-[var(--bg-secondary)] rounded-md p-3">
                   <div className="text-[var(--text-secondary)] mb-1">Value</div>
                   <div className="font-mono">
-                    {`${Number(scenario.tokenValue).toLocaleString()} THVT`}
+                    {`${Number(scenario.tokenValue).toLocaleString()} USDC`}
                   </div>
                 </div>
                 <div className="bg-[var(--bg-secondary)] rounded-md p-3">
@@ -925,12 +925,12 @@ export default function TestTransactionsPage() {
 
       {activeTab === "erc20" && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
-          <h3 className="font-semibold text-lg mb-4">ERC20 Token Transfer (THVT)</h3>
+          <h3 className="font-semibold text-lg mb-4">ERC20 Token Transfer (USDC)</h3>
           
           <div className="space-y-4">
             <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-4">
-              <div className="text-xs text-[var(--text-secondary)] mb-1">Wallet THVT Balance</div>
-              <div className="font-mono text-lg">{tokenBalance} THVT</div>
+              <div className="text-xs text-[var(--text-secondary)] mb-1">Wallet USDC Balance</div>
+              <div className="font-mono text-lg">{tokenBalance} USDC</div>
             </div>
 
             <div>
@@ -945,7 +945,7 @@ export default function TestTransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Amount (THVT)</label>
+              <label className="block text-sm font-medium mb-1">Amount (USDC)</label>
               <input
                 type="text"
                 value={erc20Amount}
@@ -954,7 +954,7 @@ export default function TestTransactionsPage() {
                 className="w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-md text-[var(--text-primary)]"
               />
               <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Enter amount in THVT (18 decimals). Large amounts trigger high-value policies.
+                Enter amount in USDC (18 decimals). Large amounts trigger high-value policies.
               </p>
             </div>
 
@@ -983,12 +983,12 @@ export default function TestTransactionsPage() {
 
       {activeTab === "mint" && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-6">
-          <h3 className="font-semibold text-lg mb-4">Mint THVT to Multisig</h3>
+          <h3 className="font-semibold text-lg mb-4">Mint USDC to Multisig</h3>
           
           <div className="space-y-4">
             <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-4">
-              <div className="text-xs text-[var(--text-secondary)] mb-1">Current Wallet THVT Balance</div>
-              <div className="font-mono text-lg">{tokenBalance} THVT</div>
+              <div className="text-xs text-[var(--text-secondary)] mb-1">Current Wallet USDC Balance</div>
+              <div className="font-mono text-lg">{tokenBalance} USDC</div>
             </div>
 
             <button
@@ -996,7 +996,7 @@ export default function TestTransactionsPage() {
               disabled={isPending || isConfirming}
               className="w-full px-4 py-2 bg-[var(--accent)] text-black rounded-md hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? "Minting..." : isConfirming ? "Confirming..." : "Mint 100,000 THVT"}
+              {isPending ? "Minting..." : isConfirming ? "Confirming..." : "Mint 100,000 USDC"}
             </button>
 
             <p className="text-xs text-[var(--text-secondary)] text-center">
@@ -1043,7 +1043,7 @@ export default function TestTransactionsPage() {
                 className="w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-md text-[var(--text-primary)] font-mono"
               />
               <p className="text-xs text-[var(--text-secondary)] mt-1">
-                Leave as 0x for simple ETH transfers
+                Leave as 0x for simple transfers
               </p>
             </div>
 

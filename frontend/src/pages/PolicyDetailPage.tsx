@@ -109,11 +109,11 @@ export default function PolicyDetailPage() {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Per-Tx (USD)</dt>
-              <dd>{p.limits.maxValuePerTxUsd > 0n ? `$${formatUsd(p.limits.maxValuePerTxUsd)}` : "Unlimited"}</dd>
+              <dd>{p.limits.maxValuePerTxUsd === MAX_UINT256 ? "Infinite" : p.limits.maxValuePerTxUsd > 0n ? `$${formatUsd(p.limits.maxValuePerTxUsd)}` : "Unlimited"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Daily (USD)</dt>
-              <dd>{p.limits.maxValueDailyUsd > 0n ? `$${formatUsd(p.limits.maxValueDailyUsd)}` : "Unlimited"}</dd>
+              <dd>{p.limits.maxValueDailyUsd === MAX_UINT256 ? "Infinite" : p.limits.maxValueDailyUsd > 0n ? `$${formatUsd(p.limits.maxValueDailyUsd)}` : "Unlimited"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Allowlist</dt>

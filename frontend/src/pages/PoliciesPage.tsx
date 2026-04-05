@@ -5,6 +5,8 @@ import { POLICY_REGISTRY_ABI } from "../lib/abi";
 import { Link, Navigate } from "react-router-dom";
 import { useMultisig } from "../context/MultisigContext";
 
+const MAX_UINT256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
+
 export default function PoliciesPage() {
   const { selectedMultisig, hasSelection } = useMultisig();
 
@@ -112,9 +114,7 @@ export default function PoliciesPage() {
                     Max Per-Tx
                   </p>
                   <p className="text-sm font-mono">
-                    {policy.limits.maxValuePerTxUsd > 0n
-                      ? `$${formatUsd(policy.limits.maxValuePerTxUsd)}`
-                      : "Unlimited"}
+                    {policy.limits.maxValuePerTxUsd === MAX_UINT256 ? "Infinite" : policy.limits.maxValuePerTxUsd > 0n ? `$${formatUsd(policy.limits.maxValuePerTxUsd)}` : "Unlimited"}
                   </p>
                 </div>
               </div>

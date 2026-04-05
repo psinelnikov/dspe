@@ -30,10 +30,10 @@ export function validateAddress(address: string | undefined): address is `0x${st
 }
 
 export const PRESET_DESCRIPTIONS: Record<number, string> = {
-  0: "Auto-approve transfers under $1,000. Low friction for everyday operations.",
-  1: "Transfers from $1K to $50K. Requires multi-sig approval with medium risk checks.",
-  2: "Admin operations like signer changes. Requires verified contracts and unanimous approval.",
-  3: "Interact with whitelisted DeFi protocols. Moderate limits with balanced security.",
+  0: "Auto-approve transfers under $1,000. Low friction for everyday operations. Requires 1 signer.",
+  1: "High-Value Transfers over $1,000 USDC. Requires multi-sig approval with 2 signers and medium risk checks.",
+  2: "Very High Value transfers over $50K. Requires verified contracts and 3 signers for admin-level approval.",
+  3: "Interact with whitelisted DeFi protocols. Moderate limits with balanced security requiring 2 signers.",
 };
 
 export const CHECK_LABELS: Record<number, string> = {

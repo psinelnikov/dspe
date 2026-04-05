@@ -287,11 +287,11 @@ function PolicyProposalDetails({ target, data, policyRegistryAddress }: { target
           <dl className="space-y-1 text-xs">
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Per-Tx</dt>
-              <dd>{limits.maxValuePerTxUsd > 0n ? `$${formatUsd(limits.maxValuePerTxUsd)}` : "Unlimited"}</dd>
+              <dd>{limits.maxValuePerTxUsd === MAX_UINT256 ? "Infinite" : limits.maxValuePerTxUsd > 0n ? `$${formatUsd(limits.maxValuePerTxUsd)}` : "Unlimited"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Daily</dt>
-              <dd>{limits.maxValueDailyUsd > 0n ? `$${formatUsd(limits.maxValueDailyUsd)}` : "Unlimited"}</dd>
+              <dd>{limits.maxValueDailyUsd === MAX_UINT256 ? "Infinite" : limits.maxValueDailyUsd > 0n ? `$${formatUsd(limits.maxValueDailyUsd)}` : "Unlimited"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Allowlist</dt>
