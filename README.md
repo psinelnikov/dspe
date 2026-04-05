@@ -78,51 +78,59 @@ forge test -v
 npx vitest run
 ```
 
+## Deployed Contracts (Coston2 Testnet)
+
+The following contracts are already deployed on Coston2 (Chain ID 114):
+
+| Contract | Address | Notes |
+|----------|---------|-------|
+| InstructionSender | `0x6655Ff0B55508E79f808CB341DCF3Eb176b80EcC` | Entry point for encrypted evaluation requests |
+| TeeExtensionRegistry | `0x3d478d43426081BD5854be9C7c5c183bfe76C981` | Flare TEE extension registry |
+| TeeMachineRegistry | `0x5918Cd58e5caf755b8584649Aa24077822F87613` | Flare TEE machine registry |
+
 ## Deploying to Coston2
 
-### 1. Deploy contracts (in order)
+### 1. Deploy core contracts (in order)
+
+The InstructionSender contract is already deployed. Deploy your organization's core contracts:
 
 ```bash
 # Load env
 export $(cat .env | xargs)
 
-# 1. GovernanceMultisig
+# 1. GovernanceMultisig (requires ALL signers to approve)
 forge create --rpc-url $FLARE_RPC_URL --private-key $PRIVATE_KEY --broadcast \
   contract/src/GovernanceMultisig.sol:GovernanceMultisig \
   --constructor-args "[$GOVERNANCE_SIGNERS]"
 
-# Extract the deployed address (look for "Deployed to:" in output)
-GOVERNANCE_MULTISIG=0xF11c29D252491d4d1e4031F744FBf2d43E7C934a
+# Save the deployed address
+echo "GOVERNANCE_MULTISIG_ADDR=<deployed-address>" >> .env
 
-# 2. PolicyRegistry
+# 2. PolicyRegistry (passing GovernanceMultisig address)
 forge create --rpc-url $FLARE_RPC_URL --private-key $PRIVATE_KEY --broadcast \
   contract/src/PolicyRegistry.sol:PolicyRegistry \
-  --constructor-args $GOVERNANCE_MULTISIG
+  --constructor-args $GOVERNANCE_MULTISIG_ADDR
 
-# Extract the deployed address
-POLICY_REGISTRY=<extracted_address_from_output>
+# Save the deployed address
+echo "POLICY_REGISTRY_ADDR=<deployed-address>" >> .env
 
-# 3. AuditLog
+# 3. AuditLog (no constructor args)
 forge create --rpc-url $FLARE_RPC_URL --private-key $PRIVATE_KEY --broadcast \
   contract/src/AuditLog.sol:AuditLog
 
-# Extract the deployed address
-AUDIT_LOG=<extracted_address_from_output>
+# Save the deployed address
+echo "AUDIT_LOG_ADDR=<deployed-address>" >> .env
 
-# 4. MultisigWallet
+# 4. MultisigWallet (passing AuditLog address)
 forge create --rpc-url $FLARE_RPC_URL --private-key $PRIVATE_KEY --broadcast \
   contract/src/MultisigWallet.sol:MultisigWallet \
-  --constructor-args $AUDIT_LOG
+  --constructor-args $AUDIT_LOG_ADDR
 
-# Extract the deployed address
-MULTISIG_WALLET=<extracted_address_from_output>
-
-# Save addresses to .env
-echo "GOVERNANCE_MULTISIG_ADDR=$GOVERNANCE_MULTISIG" >> .env
-echo "POLICY_REGISTRY_ADDR=$POLICY_REGISTRY" >> .env
-echo "AUDIT_LOG_ADDR=$AUDIT_LOG" >> .env
-echo "MULTISIG_WALLET_ADDR=$MULTISIG_WALLET" >> .env
+# Save the deployed address
+echo "MULTISIG_WALLET_ADDR=<deployed-address>" >> .env
 ```
+
+**Note:** The InstructionSender contract (`0x6655Ff0B55508E79f808CB341DCF3Eb176b80EcC`) is already deployed on Coston2 and serves as the entry point for all TEE evaluation requests.
 
 ### 2. Add initial policies via governance
 
@@ -142,9 +150,11 @@ cast send $GOVERNANCE_MULTISIG_ADDR "approve(uint256)" 0 --private-key <SIGNER3_
 cast send $GOVERNANCE_MULTISIG_ADDR "execute(uint256)" 0 --private-key $PRIVATE_KEY --rpc-url $FLARE_RPC_URL
 ```
 
-**Note:** This multisig requires ALL signers to approve before execution. For complex policy creation, you may need to create custom scripts or use a frontend interface.
+**Note:** This multisig requires ALL signers to approve before execution. For complex policy creation, you may need to create custom scripts or use the frontend interface at `app/`.
 
 ### 3. Build and start the TEE extension
+
+The TEE extension stack includes the extension-tee, ext-proxy, and redis services:
 
 ```bash
 docker compose build
@@ -152,17 +162,34 @@ docker compose up -d
 
 # Wait for the service to be ready
 until curl -sf http://localhost:6676/info >/dev/null 2>&1; do sleep 2; done
+echo "Extension proxy is ready"
 ```
 
 ### 4. Register the TEE extension
 
-```bash
-# Expose via tunnel
-cloudflared tunnel --url http://localhost:6676
-# Save the TUNNEL_URL to .env
+Follow the Flare TEE registration process using the tools in `go/tools/`:
 
-# Register (using scaffold tools or manual registration)
-# Then set the extension ID:
+```bash
+# In a separate terminal, expose the extension via tunnel
+cloudflared tunnel --url http://localhost:6676
+# Copy the HTTPS URL and save to .env as TUNNEL_URL
+
+# Then register the extension and TEE machine (see FLARE_TEE_README.md for details)
+cd go/tools
+go run ./cmd/register-extension  # Save the printed EXTENSION_ID
+go run ./cmd/allow-tee-version -p http://localhost:6676
+go run ./cmd/register-tee -p http://localhost:6676 -l
+```
+
+### 5. Link InstructionSender to your extension
+
+Once your extension is registered, set the extension ID on the InstructionSender:
+
+```bash
+# The InstructionSender is already deployed at:
+INSTRUCTION_SENDER=0x6655Ff0B55508E79f808CB341DCF3Eb176b80EcC
+
+# Set the extension ID (requires the extension owner)
 cast send $INSTRUCTION_SENDER "setExtensionIdManual(uint256)" $EXTENSION_ID \
   --private-key $PRIVATE_KEY --rpc-url $FLARE_RPC_URL
 ```
@@ -170,15 +197,15 @@ cast send $INSTRUCTION_SENDER "setExtensionIdManual(uint256)" $EXTENSION_ID \
 ## Sending an Evaluation
 
 ```bash
-# 1. Get TEE public key
+# 1. Get TEE public key from your local extension
 TEE_PUB_KEY=$(curl -s http://localhost:6676/info | jq -r '.publicKey')
 
 # 2. Encrypt the request (use eciesjs or similar)
 # Encode: abi.encode(target, calldata, value, sender, nonce)
 # Encrypt: eciesEncrypt(teePublicKey, encoded)
 
-# 3. Submit on-chain
-cast send $INSTRUCTION_SENDER "sendEvaluate(bytes)" $ENCRYPTED_HEX \
+# 3. Submit on-chain using the deployed InstructionSender
+cast send 0x6655Ff0B55508E79f808CB341DCF3Eb176b80EcC "sendEvaluate(bytes)" $ENCRYPTED_HEX \
   --value 2000 \
   --private-key $PRIVATE_KEY \
   --rpc-url $FLARE_RPC_URL
@@ -214,12 +241,15 @@ External API failures use a **fail-open** policy: the check bit is set to pass a
 ```
 contract/src/         Solidity contracts (5 + 2 interfaces)
 contract/test/        Forge tests (14 tests)
+contract/broadcast/   Deployment records
+config/coston2/       Deployed addresses for Coston2 testnet
 app/                  TEE extension business logic
 app/checks/           Individual risk check implementations
 base/                 Infrastructure (HTTP server, routing, utilities)
 tests/                Vitest tests (37 tests)
+frontend/             React-based web interface for governance
 Dockerfile            TEE node + extension dual-process container
-docker-compose.yml    extension-tee + redis
+docker-compose.yml    extension-tee + ext-proxy + redis
 ```
 
 ## License
