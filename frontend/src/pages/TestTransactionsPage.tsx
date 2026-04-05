@@ -147,21 +147,9 @@ export default function TestTransactionsPage() {
       // Ensure result is bigint before formatting
       const balanceBigInt = typeof result === 'bigint' ? result : BigInt(result as string);
       
-      // Check if the value is unexpectedly large (more than typical 18 decimals)
-      // Standard 100,000 tokens with 18 decimals = 10^23
-      // The contract appears to have ~35 decimals instead of 18
-      const formatted18 = formatEther(balanceBigInt);
-      const numValue = parseFloat(formatted18);
-      
-      // If the formatted value is still astronomically large (10^22 range),
-      // the contract likely has extra decimals (36 total instead of 18)
-      if (numValue > 1e20) {
-        // Divide by additional 10^18 to get human readable (36-18=18 extra decimals)
-        const adjusted = Number(balanceBigInt) / 1e36;
-        setTokenBalance(adjusted.toLocaleString());
-      } else {
-        setTokenBalance(formatted18);
-      }
+      // Token has 18 decimals - use formatEther
+      const formatted = formatEther(balanceBigInt);
+      setTokenBalance(formatted);
     } catch (err) {
       console.error("Failed to fetch token balance:", err);
       setTokenBalance("0");
@@ -173,13 +161,16 @@ export default function TestTransactionsPage() {
     fetchBalance();
   }, [fetchBalance]);
 
-  // Parse transaction receipt to get actual transaction ID when confirmed
+  // Parse transaction receipt and refresh balance when confirmed
   useEffect(() => {
     if (!isConfirmed || !hash || !publicClient || !selectedMultisig) return;
     
     const parseReceipt = async () => {
       try {
         const receipt = await publicClient.getTransactionReceipt({ hash });
+        
+        // Refresh token balance after any transaction
+        fetchBalance();
         
         // For now, just use the transaction count - 1 as the ID
         const count = await publicClient.readContract({
@@ -195,7 +186,27 @@ export default function TestTransactionsPage() {
     };
     
     parseReceipt();
-  }, [isConfirmed, hash, publicClient, selectedMultisig]);
+  }, [isConfirmed, hash, publicClient, selectedMultisig, fetchBalance]);
+
+  // Poll for balance updates when on mint or erc20 tabs
+  useEffect(() => {
+    if (!selectedMultisig || !publicClient) return;
+    if (activeTab !== "mint" && activeTab !== "erc20") return;
+    
+    // Initial fetch with delay to ensure connection is ready
+    setTimeout(() => {
+      console.log("Initial balance fetch on tab change");
+      fetchBalance();
+    }, 100);
+    
+    // Poll every 3 seconds
+    const interval = setInterval(() => {
+      console.log("Polling balance update...");
+      fetchBalance();
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [activeTab, selectedMultisig, publicClient, fetchBalance]);
 
   // Fetch TEE public key on mount
   useEffect(() => {
@@ -392,9 +403,10 @@ export default function TestTransactionsPage() {
   };
 
   const handleMockEvaluation = async () => {
-    if (!selectedMultisig || !submittedTxId || selectedScenario === null || !address || !publicClient) return;
+    if (!selectedMultisig || !submittedTxId || !address || !publicClient) return;
     
-    const scenario = TEST_SCENARIOS[selectedScenario];
+    // Use selected scenario or default to scenario 0 (Low Risk)
+    const scenario = TEST_SCENARIOS[selectedScenario ?? 0];
     
     // Fetch the policy to get the actual signers
     try {
@@ -490,19 +502,14 @@ export default function TestTransactionsPage() {
 
   if (!hasSelection) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Test Transactions</h1>
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-8 text-center">
-          <p className="text-[var(--text-secondary)] mb-4">
-            No multisig wallet selected. Please select a wallet from the Home page to test transactions.
-          </p>
-          <a
-            href="/"
-            className="inline-block px-4 py-2 bg-[var(--accent)] text-black rounded-md hover:opacity-80"
-          >
-            Go to Home
-          </a>
-        </div>
+      <div className="text-center py-20">
+        <h2 className="text-2xl font-bold mb-4">No Multisig Selected</h2>
+        <p className="text-[var(--text-secondary)] mb-6">
+          Please select a multisig wallet to test transactions
+        </p>
+        <Link to="/" className="btn btn-primary">
+          Go to Home
+        </Link>
       </div>
     );
   }
@@ -729,7 +736,7 @@ export default function TestTransactionsPage() {
                   </p>
                   <button
                     onClick={handleMockEvaluation}
-                    disabled={!submittedTxId || selectedScenario === null || isMockEvalPending}
+                    disabled={!submittedTxId || isMockEvalPending}
                     className="w-full px-4 py-2 bg-[var(--bg-card)] border border-[var(--orange)] text-[var(--orange)] rounded-md hover:bg-[var(--orange)] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isMockEvalPending 
@@ -791,58 +798,6 @@ export default function TestTransactionsPage() {
                   </div>
                 </div>
               )}
-
-              <div className="bg-[var(--bg-secondary)] rounded-md p-4">
-                <h4 className="font-medium mb-2">Step 3: Sign and Execute</h4>
-                <p className="text-sm text-[var(--text-secondary)] mb-3">
-                  Once evaluated, the required signers can approve and execute the transaction.
-                </p>
-                
-                {txDetails && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--text-secondary)]">Status:</span>
-                      <span className={txDetails.executed ? "text-[var(--green)]" : txDetails.evaluated ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}>
-                        {txDetails.executed ? "Executed" : txDetails.evaluated ? "Evaluated - Ready for Approval" : "Pending Evaluation"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--text-secondary)]">Approvals:</span>
-                      <span className="font-mono">
-                        {txDetails.approvalCount} / {txDetails.requiredSigners}
-                      </span>
-                    </div>
-                    
-                    {txDetails.evaluated && !txDetails.executed && (
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={handleApproveTx}
-                          disabled={isPending}
-                          className="flex-1 px-4 py-2 bg-[var(--green)] text-black rounded-md hover:opacity-80 disabled:opacity-50"
-                        >
-                          {isPending ? "Approving..." : "Approve"}
-                        </button>
-                        <button
-                          onClick={handleExecuteTx}
-                          disabled={isPending || txDetails.approvalCount < txDetails.requiredSigners}
-                          className="flex-1 px-4 py-2 bg-[var(--accent)] text-black rounded-md hover:opacity-80 disabled:opacity-50"
-                        >
-                          {isPending ? "Executing..." : "Execute"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {!txDetails && submittedTxId && (
-                  <button
-                    onClick={() => fetchTxDetails(submittedTxId)}
-                    className="w-full px-4 py-2 bg-[var(--bg-card)] text-[var(--text-primary)] rounded-md hover:bg-[var(--border)]"
-                  >
-                    Fetch Transaction Status
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         </div>

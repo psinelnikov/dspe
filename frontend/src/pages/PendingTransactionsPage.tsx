@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useAccount } from "wagmi";
-import { formatEther, type Address } from "viem";
-import { FLARE_COSTON2_CHAIN, riskColor, riskLabel, decodeCheckResults } from "../lib/constants";
+import { formatEther, decodeFunctionData, parseUnits, type Address } from "viem";
+import { FLARE_COSTON2_CHAIN, riskColor, riskLabel, decodeCheckResults, CONTRACTS } from "../lib/constants";
 import { CopyableAddress } from "../components/CopyableAddress";
-import { MULTISIG_WALLET_ABI } from "../lib/abi";
+import { MULTISIG_WALLET_ABI, ERC20_ABI } from "../lib/abi";
 import { Link } from "react-router-dom";
 import { useMultisig } from "../context/MultisigContext";
 
@@ -22,6 +22,7 @@ interface Transaction {
   instructionId: `0x${string}`;
   approvalCount: number;
   requiredSignerSet?: Address[];
+  thvtValue?: string;
 }
 
 export default function PendingTransactionsPage() {
@@ -69,10 +70,28 @@ export default function PendingTransactionsPage() {
           });
 
           if (!result[4]) { // not executed
+            const data = result[1] as `0x${string}`;
+            let thvtValue: string | undefined;
+            
+            // Try to decode ERC20 transfer data
+            if (data && data !== "0x" && data.length >= 138) {
+              try {
+                const decoded = decodeFunctionData({
+                  abi: ERC20_ABI,
+                  data: data,
+                });
+                if (decoded.functionName === "transfer" && decoded.args && decoded.args[1]) {
+                  thvtValue = formatEther(decoded.args[1] as bigint);
+                }
+              } catch {
+                // Not an ERC20 transfer, ignore
+              }
+            }
+            
             txs.push({
               id: i,
               target: result[0] as Address,
-              data: result[1] as `0x${string}`,
+              data: data,
               value: result[2] as bigint,
               nonce: result[3] as bigint,
               executed: result[4] as boolean,
@@ -83,6 +102,7 @@ export default function PendingTransactionsPage() {
               matchedPolicyId: result[9] as bigint,
               instructionId: result[10] as `0x${string}`,
               approvalCount: Number(approvalCount),
+              thvtValue,
             });
           }
         }
@@ -243,6 +263,12 @@ export default function PendingTransactionsPage() {
                         <span className="text-[var(--text-secondary)]">Value:</span>{" "}
                         <span className="font-mono">{formatEther(tx.value)} C2FLR</span>
                       </div>
+                      {tx.thvtValue && (
+                        <div>
+                          <span className="text-[var(--text-secondary)]">THVT Amount:</span>{" "}
+                          <span className="font-mono text-[var(--accent)]">{tx.thvtValue} THVT</span>
+                        </div>
+                      )}
                       {tx.evaluated && (
                         <>
                           <div>
@@ -293,7 +319,7 @@ export default function PendingTransactionsPage() {
                       </button>
                     )}
                     {isReadyForApproval && userHasApproved && (
-                      <span className="text-xs text-[var(--green)] px-2 py-1 bg-[var(--green)] bg-opacity-10 rounded">
+                      <span className="text-xs text-black px-2 py-1 bg-[var(--green)] bg-opacity-10 rounded">
                         You approved
                       </span>
                     )}
