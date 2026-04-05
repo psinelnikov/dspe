@@ -259,10 +259,6 @@ export default function PendingTransactionsPage() {
                         <span className="text-[var(--text-secondary)]">Target:</span>{" "}
                         <CopyableAddress address={tx.target} />
                       </div>
-                      <div>
-                        <span className="text-[var(--text-secondary)]">Value:</span>{" "}
-                        <span className="font-mono">{formatEther(tx.value)} C2FLR</span>
-                      </div>
                       {tx.thvtValue && (
                         <div>
                           <span className="text-[var(--text-secondary)]">THVT Amount:</span>{" "}

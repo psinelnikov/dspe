@@ -128,21 +128,6 @@ function MultisigCard({
           Select
         </button>
       </div>
-
-      <div className="mt-4 pt-4 border-t border-[var(--border)] grid grid-cols-3 gap-4 text-center">
-        <div>
-          <p className="text-xs text-[var(--text-secondary)]">Policies</p>
-          <p className="text-sm font-medium">View</p>
-        </div>
-        <div>
-          <p className="text-xs text-[var(--text-secondary)]">Audit Log</p>
-          <p className="text-sm font-medium">View</p>
-        </div>
-        <div>
-          <p className="text-xs text-[var(--text-secondary)]">Proposals</p>
-          <p className="text-sm font-medium">View</p>
-        </div>
-      </div>
     </div>
   );
 }

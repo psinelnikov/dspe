@@ -5,6 +5,8 @@ import { CopyableAddress } from "../components/CopyableAddress";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
 import { useMultisig } from "../context/MultisigContext";
 
+const MAX_UINT256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
+
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const policyId = BigInt(id ?? "0");
@@ -87,7 +89,7 @@ export default function PolicyDetailPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Value</dt>
-              <dd>{p.conditions.maxValue > 0n ? p.conditions.maxValue.toString() : "No cap"}</dd>
+              <dd>{p.conditions.maxValue === MAX_UINT256 ? "Infinite" : p.conditions.maxValue > 0n ? p.conditions.maxValue.toString() : "No cap"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Require Verified</dt>

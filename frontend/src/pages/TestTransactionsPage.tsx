@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
-import { parseEther, formatEther, encodeFunctionData, parseUnits, type Address } from "viem";
+import { parseEther, formatEther, encodeFunctionData, parseUnits, type Address, keccak256, hexToBytes, bytesToHex, encodePacked, toBytes, stringToHex } from "viem";
 import { useMultisig } from "../context/MultisigContext";
 import { POLICY_REGISTRY_ABI } from "../lib/abi";
 import { FLARE_COSTON2_CHAIN } from "../lib/constants";
@@ -256,6 +256,126 @@ export default function TestTransactionsPage() {
     poll();
   }, [instructionId, teeStatus, submittedTxId, selectedMultisig, writeEvaluationAttested]);
 
+  // Handle TEE sendEvaluate transaction completion
+  useEffect(() => {
+    if (!isConfirmed || !hash || teeStatus !== "sending" || !publicClient) return;
+    
+    const handleTeeSendComplete = async () => {
+      try {
+        // Get the transaction details to extract the encrypted message
+        const tx = await publicClient.getTransaction({ hash });
+        
+        if (!tx) {
+          setTeeError("Failed to get transaction details");
+          setTeeStatus("error");
+          return;
+        }
+        
+        // Extract the encrypted message from the transaction input data
+        // The data format is: function selector (4 bytes) + encoded arguments
+        const txData = tx.input;
+        // sendEvaluate(bytes) function selector is 0x + first 4 bytes
+        // The argument is offset (32 bytes) + length (32 bytes) + data
+        
+        // Extract encrypted message from the transaction input
+        // skip 4 bytes (selector) + 32 bytes (offset) = 36 bytes = 72 hex chars + 0x = 74
+        const offsetHex = txData.slice(10, 74);
+        const offset = parseInt(offsetHex, 16);
+        // length is at position 36 + offset
+        const lengthPos = 36 + offset * 2; // *2 because hex
+        const lengthHex = txData.slice(lengthPos, lengthPos + 64);
+        const length = parseInt(lengthHex, 16);
+        // data starts after length
+        const dataStart = lengthPos + 64;
+        const encryptedMessage = txData.slice(dataStart, dataStart + length * 2) as `0x${string}`;
+        
+        // Get the transaction receipt to extract the instructionId from event logs
+        const receipt = await publicClient.getTransactionReceipt({ hash });
+        
+        console.log("Transaction receipt:", {
+          blockNumber: receipt.blockNumber.toString(),
+          logs: receipt.logs.length,
+        });
+        
+        // Extract instructionId from TeeInstructionsSent event
+        // Event signature: TeeInstructionsSent(bytes32 indexed instructionId, address indexed sender, bytes32 indexed opType, uint256 timestamp)
+        // Topics: [eventSig, instructionId, sender, opType]
+        let instructionId: `0x${string}` | null = null;
+        
+        if (receipt.logs.length > 0) {
+          console.log("Parsing receipt logs...");
+          
+          for (const log of receipt.logs) {
+            console.log("  Log:", {
+              address: log.address,
+              topics: log.topics,
+              data: log.data.slice(0, 100),
+            });
+            
+            // TeeInstructionsSent event has 4 topics: event signature + 3 indexed params
+            if (log.topics.length >= 3) {
+              // instructionId is topics[1] (first indexed param after event signature)
+              instructionId = log.topics[1] as `0x${string}`;
+              console.log("  Found instructionId in log:", instructionId);
+              break;
+            }
+          }
+        }
+        
+        if (!instructionId) {
+          // Fallback: try to compute it for backwards compatibility with old mock
+          console.warn("No TeeInstructionsSent event found, falling back to computation");
+          
+          // Get the block to get the timestamp used in the transaction
+          const block = await publicClient.getBlock({ blockNumber: receipt.blockNumber });
+          const timestamp = block.timestamp;
+          
+          // Compute instructionId: keccak256(abi.encodePacked(opType, opCommand, message, timestamp))
+          const opTypeBytes32 = stringToHex("EVALUATE_RISK", { size: 32 });
+          const opCommandBytes32 = stringToHex("", { size: 32 });
+          
+          // encodePacked matches Solidity's abi.encodePacked
+          const packed = encodePacked(
+            ['bytes32', 'bytes32', 'bytes', 'uint256'],
+            [opTypeBytes32, opCommandBytes32, encryptedMessage, timestamp]
+          );
+          
+          // Compute keccak256
+          instructionId = keccak256(packed);
+          
+          console.log("  Computed instructionId (fallback):", instructionId);
+        }
+        
+        console.log("  Using instructionId:", instructionId);
+        console.log("  Querying TEE proxy for result...");
+        
+        // Before setting the ID and polling, let's try to fetch the result once to see if it exists
+        const testResponse = await fetch(`${TEE_PROXY_URL}/action/result/${instructionId}`);
+        console.log("  Test fetch result:", testResponse.status, testResponse.status === 200 ? "Found!" : "Not found");
+        
+        if (testResponse.status === 404) {
+          // TEE result not found
+          console.warn("TEE evaluation not found at proxy");
+          setTeeError(
+            "TEE evaluation unavailable: Result not found at proxy. " +
+            "Please use the 'Mock Evaluation (Skip TEE)' button below instead."
+          );
+          setTeeStatus("error");
+          return;
+        }
+        
+        setInstructionId(instructionId);
+        setTeeStatus("polling");
+      } catch (err) {
+        console.error("Failed to process TEE send completion:", err);
+        setTeeError(`Failed to process TEE response: ${err}`);
+        setTeeStatus("error");
+      }
+    };
+    
+    handleTeeSendComplete();
+  }, [isConfirmed, hash, teeStatus, publicClient]);
+
   const handleSubmitScenario = async (scenario: typeof TEST_SCENARIOS[0]) => {
     if (!selectedMultisig || !address || !teePublicKey) return;
     
@@ -361,7 +481,7 @@ export default function TestTransactionsPage() {
       address: CONTRACTS.testToken,
       abi: ERC20_ABI,
       functionName: "mint",
-      args: [selectedMultisig.wallet, parseUnits("100000", 18)],
+      args: [selectedMultisig.wallet, 100000n],
     });
   };
 

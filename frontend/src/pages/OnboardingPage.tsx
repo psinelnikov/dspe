@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { decodeEventLog, parseAbiItem } from "viem";
 import { FLARE_COSTON2_CHAIN, CONTRACTS, PRESET_DESCRIPTIONS, shortAddress, explorerUrl } from "../lib/constants";
@@ -621,13 +622,15 @@ function DeployStep({
 }
 
 function SuccessStep({ deployment }: { deployment: DeploymentResult }) {
+  const navigate = useNavigate();
+  
   return (
     <div className="max-w-lg mx-auto">
       <div className="card text-center py-8">
         <div className="text-4xl mb-4">&#x1F389;</div>
         <h3 className="text-xl font-bold text-[var(--green)] mb-2">Multisig Wallet Created!</h3>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
-          All contracts have been deployed and configured. Update your environment variables to start using the wallet.
+          All contracts have been deployed and configured. You're ready to start using your wallet.
         </p>
 
         <div className="text-left space-y-3 mb-6">
@@ -637,19 +640,12 @@ function SuccessStep({ deployment }: { deployment: DeploymentResult }) {
           <ContractRow label="Audit Log" address={deployment.auditLog} />
         </div>
 
-        <div className="bg-[var(--bg-secondary)] rounded-lg p-4 text-left mb-6">
-          <p className="text-xs text-[var(--text-secondary)] mb-2">Add to your .env file:</p>
-          <pre className="text-xs font-mono text-[var(--green)] whitespace-pre-wrap">
-{`VITE_MULTISIG_WALLET_ADDR=${deployment.wallet}
-VITE_GOVERNANCE_MULTISIG_ADDR=${deployment.governance}
-VITE_POLICY_REGISTRY_ADDR=${deployment.policyRegistry}
-VITE_AUDIT_LOG_ADDR=${deployment.auditLog}`}
-          </pre>
-        </div>
-
-        <p className="text-xs text-[var(--text-secondary)]">
-          Restart your dev server after updating environment variables.
-        </p>
+        <button
+          onClick={() => navigate("/transact")}
+          className="btn btn-primary text-lg px-8 py-3"
+        >
+          Go to Transact →
+        </button>
       </div>
     </div>
   );

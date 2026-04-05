@@ -6,6 +6,14 @@ import "../../src/interface/ITeeExtensionRegistry.sol";
 contract MockTeeExtensionRegistry is ITeeExtensionRegistry {
     mapping(bytes32 => ActionResult) internal actionResults;
 
+    // Event emitted when instructions are sent - matches real TeeExtensionRegistry
+    event TeeInstructionsSent(
+        bytes32 indexed instructionId,
+        address indexed sender,
+        bytes32 indexed opType,
+        uint256 timestamp
+    );
+
     function sendInstructions(
         address[] calldata,
         TeeInstructionParams calldata _params
@@ -22,6 +30,10 @@ contract MockTeeExtensionRegistry is ITeeExtensionRegistry {
             version: "0.1.0",
             data: ""
         });
+        
+        // Emit event so instructionId can be extracted from transaction receipt
+        emit TeeInstructionsSent(instructionId, msg.sender, _params.opType, block.timestamp);
+        
         return instructionId;
     }
 

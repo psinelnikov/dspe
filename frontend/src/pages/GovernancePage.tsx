@@ -7,6 +7,8 @@ import { encodeFunctionData, decodeFunctionData, type Hex } from "viem";
 import { Link } from "react-router-dom";
 import { useMultisig } from "../context/MultisigContext";
 
+const MAX_UINT256 = 115792089237316195423570985008687907853269984665640564039457584007913129639935n;
+
 export default function GovernancePage() {
   const { address } = useAccount();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -266,7 +268,7 @@ function PolicyProposalDetails({ target, data, policyRegistryAddress }: { target
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Max Value</dt>
-              <dd>{conditions.maxValue > 0n ? conditions.maxValue.toString() : "No cap"}</dd>
+              <dd>{conditions.maxValue === MAX_UINT256 ? "Infinite" : conditions.maxValue > 0n ? conditions.maxValue.toString() : "No cap"}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-[var(--text-secondary)]">Verified</dt>
@@ -424,14 +426,17 @@ function CreateProposalForm({
           <label className="text-xs text-[var(--text-secondary)] mb-1 block">Denylist (comma-separated, optional)</label>
           <input value={denylist} onChange={(e) => setDenylist(e.target.value)} placeholder="0xAddr1, 0xAddr2" />
         </div>
+        <div className="md:col-span-2">
         <div className="flex items-center gap-2">
-          <input type="checkbox" id="reqVer" checked={requireVerified} onChange={(e) => setRequireVerified(e.target.checked)} className="w-4 h-4" />
-          <label htmlFor="reqVer" className="text-sm">Require Contract Verification</label>
+          <input type="checkbox" id="reqVer" checked={requireVerified} onChange={(e) => setRequireVerified(e.target.checked)} style={{ width: '4%' }} />
+          <label htmlFor="reqVer" className="text-sm whitespace-nowrap">Require Contract Verification</label>
         </div>
         <div className="flex items-center gap-2">
-          <input type="checkbox" id="req7730" checked={requireErc7730} onChange={(e) => setRequireErc7730(e.target.checked)} className="w-4 h-4" />
-          <label htmlFor="req7730" className="text-sm">Require ERC-7730 Descriptor</label>
+          <input type="checkbox" id="req7730" checked={requireErc7730} onChange={(e) => setRequireErc7730(e.target.checked)} style={{ width: '4%' }} />
+          <label htmlFor="req7730" className="text-sm whitespace-nowrap">Require ERC-7730 Descriptor</label>
         </div>
+         </div>
+
       </div>
       <div className="flex gap-3 mt-4">
         <button

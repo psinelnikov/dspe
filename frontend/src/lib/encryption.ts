@@ -81,7 +81,7 @@ export async function pollForEvaluationResult(
   intervalMs: number = 2000
 ): Promise<any> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const response = await fetch(`${proxyUrl}/result/${instructionId}`);
+    const response = await fetch(`${proxyUrl}/action/result/${instructionId}`);
     
     if (response.ok) {
       const result = await response.json();

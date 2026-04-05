@@ -9,6 +9,10 @@ interface CopyableAddressProps {
 export function CopyableAddress({ address, short = true, className = "" }: CopyableAddressProps) {
   const [copied, setCopied] = useState(false);
 
+  if (!address) {
+    return <span className="text-[var(--text-secondary)]">—</span>;
+  }
+
   const displayAddress = short && address.length > 10
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : address;
