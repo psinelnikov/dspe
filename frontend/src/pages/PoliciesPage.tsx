@@ -105,7 +105,6 @@ export default function PoliciesPage() {
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] mt-1">
                     ID: {policy.id.toString()} &middot; Risk Weight: {policy.riskWeight}/10
-                    &middot; Signers: {policy.signers.length}
                   </p>
                 </div>
                 <div className="text-right">
@@ -150,12 +149,6 @@ export default function PoliciesPage() {
                     Selectors: {policy.conditions.functionSelectors.join(", ")}
                   </span>
                 )}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                {policy.signers.map((s: string, i: number) => (
-                  <CopyableAddress key={i} address={s} />
-                ))}
               </div>
             </Link>
           ))}

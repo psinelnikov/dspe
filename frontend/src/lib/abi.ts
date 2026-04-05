@@ -518,6 +518,13 @@ export const MULTISIG_WALLET_ABI = [
   },
   {
     type: "function",
+    name: "getRequiredSignerSet",
+    stateMutability: "view",
+    inputs: [{ name: "_txId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    type: "function",
     name: "hasApproved",
     stateMutability: "view",
     inputs: [

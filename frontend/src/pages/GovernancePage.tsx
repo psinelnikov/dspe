@@ -3,7 +3,7 @@ import { useReadContracts, useReadContract, useWriteContract, useAccount, useWai
 import { FLARE_COSTON2_CHAIN, shortAddress, formatTimestamp } from "../lib/constants";
 import { CopyableAddress } from "../components/CopyableAddress";
 import { GOVERNANCE_MULTISIG_ABI, POLICY_REGISTRY_ABI } from "../lib/abi";
-import { encodeFunctionData, type Hex } from "viem";
+import { encodeFunctionData, decodeFunctionData, type Hex } from "viem";
 import { Link } from "react-router-dom";
 import { useMultisig } from "../context/MultisigContext";
 
@@ -102,6 +102,7 @@ export default function GovernancePage() {
               totalSigners={totalSigners}
               userAddress={address}
               governanceAddress={governanceAddress}
+              policyRegistryAddress={policyRegistryAddress}
             />
           ))}
         </div>
@@ -110,7 +111,7 @@ export default function GovernancePage() {
   );
 }
 
-function ProposalRow({ proposal, totalSigners, userAddress, governanceAddress }: { proposal: any; totalSigners: number; userAddress?: `0x${string}`; governanceAddress: `0x${string}` }) {
+function ProposalRow({ proposal, totalSigners, userAddress, governanceAddress, policyRegistryAddress }: { proposal: any; totalSigners: number; userAddress?: `0x${string}`; governanceAddress: `0x${string}`; policyRegistryAddress: `0x${string}` }) {
   const { writeContract, data: txHash } = useWriteContract();
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -194,8 +195,126 @@ function ProposalRow({ proposal, totalSigners, userAddress, governanceAddress }:
           />
         </div>
       </div>
+
+      {/* Policy Details Section - only for policy registry proposals */}
+      <PolicyProposalDetails 
+        target={proposal.target} 
+        data={proposal.data} 
+        policyRegistryAddress={policyRegistryAddress}
+      />
     </div>
   );
+}
+
+function PolicyProposalDetails({ target, data, policyRegistryAddress }: { target: `0x${string}`; data: `0x${string}`; policyRegistryAddress: `0x${string}` }) {
+  // Only show details for policy registry proposals
+  if (target.toLowerCase() !== policyRegistryAddress.toLowerCase()) {
+    return null;
+  }
+
+  // Try to decode the policy proposal data
+  let policyDetails: any = null;
+  try {
+    const decoded = decodeFunctionData({
+      abi: POLICY_REGISTRY_ABI,
+      data: data,
+    });
+    
+    if (decoded.functionName === "addPolicy" && decoded.args) {
+      const [name, conditions, limits, signers, riskWeight] = decoded.args as [
+        string,
+        { targetAddresses: `0x${string}`[]; functionSelectors: `0x${string}`[]; minValue: bigint; maxValue: bigint; timeWindowStart: bigint; timeWindowEnd: bigint; requireVerified: boolean; requireErc7730: boolean },
+        { maxValuePerTxUsd: bigint; maxValueDailyUsd: bigint; allowlist: `0x${string}`[]; denylist: `0x${string}`[] },
+        `0x${string}`[],
+        number
+      ];
+      
+      policyDetails = {
+        name,
+        conditions,
+        limits,
+        signers,
+        riskWeight,
+      };
+    }
+  } catch {
+    // Not a decodable policy proposal
+    return null;
+  }
+
+  if (!policyDetails) return null;
+
+  const { name, conditions, limits, signers, riskWeight } = policyDetails;
+
+  return (
+    <div className="mt-4 pt-4 border-t border-[var(--border)]">
+      <h4 className="text-sm font-semibold text-[var(--accent)] mb-3">
+        Policy Proposal: {name} (Risk {riskWeight}/10)
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Conditions Card */}
+        <div className="bg-[var(--bg-secondary)] rounded-lg p-3">
+          <h5 className="text-xs font-semibold text-[var(--text-secondary)] uppercase mb-2">Conditions</h5>
+          <dl className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Targets</dt>
+              <dd>{conditions.targetAddresses.length === 0 ? "Any" : `${conditions.targetAddresses.length} addresses`}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Min Value</dt>
+              <dd>{conditions.minValue > 0n ? conditions.minValue.toString() : "Any"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Max Value</dt>
+              <dd>{conditions.maxValue > 0n ? conditions.maxValue.toString() : "No cap"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Verified</dt>
+              <dd>{conditions.requireVerified ? "Yes" : "No"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">ERC-7730</dt>
+              <dd>{conditions.requireErc7730 ? "Yes" : "No"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* Limits Card */}
+        <div className="bg-[var(--bg-secondary)] rounded-lg p-3">
+          <h5 className="text-xs font-semibold text-[var(--text-secondary)] uppercase mb-2">Limits</h5>
+          <dl className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Max Per-Tx</dt>
+              <dd>{limits.maxValuePerTxUsd > 0n ? `$${formatUsd(limits.maxValuePerTxUsd)}` : "Unlimited"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Max Daily</dt>
+              <dd>{limits.maxValueDailyUsd > 0n ? `$${formatUsd(limits.maxValueDailyUsd)}` : "Unlimited"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Allowlist</dt>
+              <dd>{limits.allowlist.length === 0 ? "None" : `${limits.allowlist.length} addresses`}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Denylist</dt>
+              <dd className="text-[var(--red)]">{limits.denylist.length === 0 ? "None" : `${limits.denylist.length} addresses`}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-[var(--text-secondary)]">Signers</dt>
+              <dd>{signers.length} required</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatUsd(val: bigint): string {
+  const num = Number(val) / 1e18;
+  if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
+  if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
+  return num.toFixed(0);
 }
 
 function CreateProposalForm({ 

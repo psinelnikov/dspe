@@ -57,7 +57,8 @@ function Shell({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2">
+            <ConnectButton />
             {hasSelection && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-card)] rounded-md">
                 <span className="text-xs text-[var(--text-secondary)]">Selected:</span>
@@ -70,7 +71,6 @@ function Shell({ children }: { children: ReactNode }) {
                 </button>
               </div>
             )}
-            <ConnectButton />
           </div>
         </div>
       </header>

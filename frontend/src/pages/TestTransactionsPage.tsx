@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { parseEther, formatEther, encodeFunctionData, parseUnits, type Address } from "viem";
 import { useMultisig } from "../context/MultisigContext";
+import { POLICY_REGISTRY_ABI } from "../lib/abi";
+import { FLARE_COSTON2_CHAIN } from "../lib/constants";
 import { MULTISIG_WALLET_ABI, ERC20_ABI, INSTRUCTION_SENDER_ABI } from "../lib/abi";
 import { CONTRACTS, shortAddress, riskColor, riskLabel, decodeCheckResults } from "../lib/constants";
 import { CopyableAddress } from "../components/CopyableAddress";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { 
   encryptEvaluateRequest, 
   fetchTeePublicKey, 
@@ -132,27 +134,44 @@ export default function TestTransactionsPage() {
   const { writeContract: writeMockEvaluation, data: mockEvalHash, isPending: isMockEvalPending } = useWriteContract();
   const { isLoading: isMockEvalConfirming, isSuccess: isMockEvalConfirmed } = useWaitForTransactionReceipt({ hash: mockEvalHash });
 
-  // Fetch token balance
-  useEffect(() => {
+  // Fetch token balance - defined at component level for reuse
+  const fetchBalance = useCallback(async () => {
     if (!selectedMultisig || !publicClient) return;
-    
-    const fetchBalance = async () => {
-      try {
-        const result = await publicClient.readContract({
-          address: CONTRACTS.testToken,
-          abi: ERC20_ABI,
-          functionName: "balanceOf",
-          args: [selectedMultisig.wallet],
-        });
-        setTokenBalance(formatEther(result));
-      } catch (err) {
-        console.error("Failed to fetch token balance:", err);
-        setTokenBalance("0");
+    try {
+      const result = await publicClient.readContract({
+        address: CONTRACTS.testToken,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [selectedMultisig.wallet],
+      });
+      // Ensure result is bigint before formatting
+      const balanceBigInt = typeof result === 'bigint' ? result : BigInt(result as string);
+      
+      // Check if the value is unexpectedly large (more than typical 18 decimals)
+      // Standard 100,000 tokens with 18 decimals = 10^23
+      // The contract appears to have ~35 decimals instead of 18
+      const formatted18 = formatEther(balanceBigInt);
+      const numValue = parseFloat(formatted18);
+      
+      // If the formatted value is still astronomically large (10^22 range),
+      // the contract likely has extra decimals (36 total instead of 18)
+      if (numValue > 1e20) {
+        // Divide by additional 10^18 to get human readable (36-18=18 extra decimals)
+        const adjusted = Number(balanceBigInt) / 1e36;
+        setTokenBalance(adjusted.toLocaleString());
+      } else {
+        setTokenBalance(formatted18);
       }
-    };
-    
-    fetchBalance();
+    } catch (err) {
+      console.error("Failed to fetch token balance:", err);
+      setTokenBalance("0");
+    }
   }, [selectedMultisig, publicClient]);
+
+  // Fetch token balance on mount
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
 
   // Parse transaction receipt to get actual transaction ID when confirmed
   useEffect(() => {
@@ -373,30 +392,58 @@ export default function TestTransactionsPage() {
   };
 
   const handleMockEvaluation = async () => {
-    if (!selectedMultisig || !submittedTxId || selectedScenario === null || !address) return;
+    if (!selectedMultisig || !submittedTxId || selectedScenario === null || !address || !publicClient) return;
     
     const scenario = TEST_SCENARIOS[selectedScenario];
     
-    // Generate synthetic check results bitmap (all checks pass for simplicity)
-    const checkResults = 0b1111111111; // All 10 checks pass
-    
-    // For mock evaluation, use the connected address as the signer
-    // In a real scenario, this would come from the TEE evaluation
-    const mockSigners = [address];
-    
-    writeMockEvaluation({
-      address: selectedMultisig.wallet,
-      abi: MULTISIG_WALLET_ABI,
-      functionName: "submitEvaluation",
-      args: [
-        BigInt(submittedTxId),
-        scenario.expectedRiskScore,
-        checkResults,
-        BigInt(scenario.policyId),
-        scenario.expectedRequiredSigners,
-        mockSigners,
-      ],
-    });
+    // Fetch the policy to get the actual signers
+    try {
+      const policy = await publicClient.readContract({
+        address: selectedMultisig.policyRegistry,
+        abi: POLICY_REGISTRY_ABI,
+        functionName: "getPolicy",
+        args: [BigInt(scenario.policyId)],
+      });
+      
+      // Use the policy's signers instead of just the connected address
+      const policySigners = policy.signers as Address[];
+      
+      // Generate synthetic check results bitmap (all checks pass for simplicity)
+      const checkResults = 0b1111111111; // All 10 checks pass
+      
+      console.log("Using policy signers for mock evaluation:", policySigners);
+      
+      writeMockEvaluation({
+        address: selectedMultisig.wallet,
+        abi: MULTISIG_WALLET_ABI,
+        functionName: "submitEvaluation",
+        args: [
+          BigInt(submittedTxId),
+          scenario.expectedRiskScore,
+          checkResults,
+          BigInt(scenario.policyId),
+          scenario.expectedRequiredSigners,
+          policySigners,
+        ],
+      });
+    } catch (err) {
+      console.error("Failed to fetch policy signers:", err);
+      // Fallback to just the connected address if policy fetch fails
+      const checkResults = 0b1111111111;
+      writeMockEvaluation({
+        address: selectedMultisig.wallet,
+        abi: MULTISIG_WALLET_ABI,
+        functionName: "submitEvaluation",
+        args: [
+          BigInt(submittedTxId),
+          scenario.expectedRiskScore,
+          checkResults,
+          BigInt(scenario.policyId),
+          scenario.expectedRequiredSigners,
+          [address],
+        ],
+      });
+    }
   };
 
   const fetchTxDetails = useCallback(async (txId: string) => {
@@ -464,20 +511,27 @@ export default function TestTransactionsPage() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold">Test Transactions</h1>
-        <a
-          href="/pending"
+        <Link
+          to="/pending"
           className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border)] rounded-md hover:bg-[var(--border)] text-sm"
         >
           View Pending →
-        </a>
+        </Link>
       </div>
       <p className="text-[var(--text-secondary)] mb-2">
         Testing wallet: <CopyableAddress address={selectedMultisig!.wallet} />
       </p>
       <div className="flex items-center gap-4 mb-6">
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-md px-3 py-1.5">
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-md px-3 py-1.5 flex items-center gap-2">
           <span className="text-xs text-[var(--text-secondary)]">THVT Balance: </span>
-          <span className="text-sm font-mono font-medium">{Number(tokenBalance).toLocaleString()} THVT</span>
+          <span className="text-sm font-mono font-medium">{tokenBalance} THVT</span>
+          <button 
+            onClick={fetchBalance}
+            className="text-xs text-[var(--accent)] hover:text-[var(--text-primary)] ml-2"
+            title="Refresh balance"
+          >
+            ↻
+          </button>
         </div>
         <div className="text-xs text-[var(--text-secondary)]">
           Token: <CopyableAddress address={CONTRACTS.testToken} />
@@ -801,7 +855,7 @@ export default function TestTransactionsPage() {
           <div className="space-y-4">
             <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-4">
               <div className="text-xs text-[var(--text-secondary)] mb-1">Wallet THVT Balance</div>
-              <div className="font-mono text-lg">{Number(tokenBalance).toLocaleString()} THVT</div>
+              <div className="font-mono text-lg">{tokenBalance} THVT</div>
             </div>
 
             <div>
@@ -859,7 +913,7 @@ export default function TestTransactionsPage() {
           <div className="space-y-4">
             <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-4">
               <div className="text-xs text-[var(--text-secondary)] mb-1">Current Wallet THVT Balance</div>
-              <div className="font-mono text-lg">{Number(tokenBalance).toLocaleString()} THVT</div>
+              <div className="font-mono text-lg">{tokenBalance} THVT</div>
             </div>
 
             <button

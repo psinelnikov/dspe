@@ -364,17 +364,6 @@ function ReviewStep({
       <h3 className="text-lg font-semibold mb-4">Review Configuration</h3>
 
       <div className="space-y-4 mb-6">
-        <div>
-          <h4 className="text-sm font-medium text-[var(--text-secondary)] mb-2">
-            Signers ({signers.length})
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {signers.map((s, i) => (
-              <CopyableAddress key={s} address={s} />
-            ))}
-          </div>
-        </div>
-
         <div className="h-px bg-[var(--border)]" />
 
         <div>

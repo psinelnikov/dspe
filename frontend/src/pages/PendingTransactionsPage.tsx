@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient, useAccount } from "wagmi";
 import { formatEther, type Address } from "viem";
-import { FLARE_COSTON2_CHAIN, riskColor, riskLabel, shortAddress, decodeCheckResults } from "../lib/constants";
+import { FLARE_COSTON2_CHAIN, riskColor, riskLabel, decodeCheckResults } from "../lib/constants";
 import { CopyableAddress } from "../components/CopyableAddress";
 import { MULTISIG_WALLET_ABI } from "../lib/abi";
 import { Link } from "react-router-dom";
@@ -21,6 +21,7 @@ interface Transaction {
   matchedPolicyId: bigint;
   instructionId: `0x${string}`;
   approvalCount: number;
+  requiredSignerSet?: Address[];
 }
 
 export default function PendingTransactionsPage() {

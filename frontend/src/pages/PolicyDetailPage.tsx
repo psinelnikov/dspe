@@ -126,29 +126,6 @@ export default function PolicyDetailPage() {
           </dl>
         </div>
       </div>
-
-      <div className="card">
-        <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-          Signers ({p.signers.length})
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-          {p.signers.map((s: string, i: number) => (
-            <a
-              key={i}
-              href={`https://coston2-explorer.flare.network/address/${s}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 bg-[var(--bg-secondary)] rounded-lg px-3 py-2 text-sm hover:border-[var(--accent)] border border-transparent transition-colors"
-              onClick={(e) => e.preventDefault()}
-            >
-              <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-black text-xs flex items-center justify-center font-semibold">
-                {i + 1}
-              </span>
-              <CopyableAddress address={s} />
-            </a>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
